@@ -1,0 +1,654 @@
+/* ===== ESTILOS FACTURASCRIPTS PARA PRODUCTLIST ===== */
+
+.order-list {
+  padding: 0;
+  background: #f5f5f5;
+  min-height: calc(100vh - 80px);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.btn-pdf1 {
+  margin-top: -4px;
+}
+
+.container-t1 {
+  background: white;
+  border-radius: 0;
+  padding: 1.5rem 2rem;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #e0e0e0;
+  width: 100%;
+}
+
+.container-t1 h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 1rem 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: none;
+  -webkit-text-fill-color: #2c3e50;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #3498db;
+}
+
+.container-t1 h2::after {
+  display: none;
+}
+
+/* ===== BARRA DE HERRAMIENTAS ESTILO FACTURASCRIPTS ===== */
+.search-containerpd {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.search-inputpd {
+  flex: 1;
+  min-width: 300px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.search-inputpd:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.total-products {
+  font-size: 0.875rem;
+  color: #6c757d;
+  font-weight: 500;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+/* ===== BOTONES ESTILO FACTURASCRIPTS ===== */
+.btn-add {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn-add:hover {
+  background: #218838;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-create-order {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-create-order:hover {
+  background: #0056b3;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== TOOLBAR BOTONES ===== */
+.toolbar-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* ===== TABLA ESTILO FACTURASCRIPTS ===== */
+.table-responsive {
+  background: white;
+  border-radius: 0;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dee2e6;
+  margin-bottom: 0;
+  margin-top: 15px;
+}
+
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.product-table thead {
+  background: #2c3e50;
+}
+
+.product-table th {
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  border-right: 1px solid #34495e;
+  white-space: nowrap;
+}
+
+.product-table th:last-child {
+  border-right: none;
+}
+
+.product-table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.product-table tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.product-table tbody tr:hover {
+  background: #e3f2fd;
+  transform: none;
+  box-shadow: none;
+}
+
+.product-table td {
+  padding: 0.75rem 0.5rem;
+  color: #2c3e50;
+  border: none;
+  vertical-align: middle;
+  border-right: 1px solid #dee2e6;
+  white-space: nowrap;
+}
+
+.product-table td:last-child {
+  border-right: none;
+}
+
+/* ===== CHECKBOX ===== */
+.select-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 2px solid #adb5bd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  accent-color: #007bff;
+}
+
+.select-checkbox:checked {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* ===== BOTONES DE ACCIÓN ===== */
+.btn-edit, .btn-delete {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-right: 0.25rem;
+}
+
+.btn-edit {
+  background: #e3f2fd;
+  color: #007bff;
+  border: 1px solid #bbdefb;
+}
+
+.btn-edit:hover {
+  background: #007bff;
+  color: white;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-delete {
+  background: #f8d7da;
+  color: #dc3545;
+  border: 1px solid #f5c6cb;
+}
+
+.btn-delete:hover {
+  background: #dc3545;
+  color: white;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== PAGINACIÓN ESTILO FACTURASCRIPTS ===== */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-top: 1px solid #dee2e6;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.pagination-btn {
+  background: white;
+  border: 1px solid #dee2e6;
+  padding: 0.4rem 0.75rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #007bff;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+  transform: none;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #6c757d;
+}
+
+.pagination-info {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 0 0.75rem;
+}
+
+/* ===== ESTADOS Y MENSAJES ===== */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-size: 1rem;
+  background: white;
+  border: 1px solid #dee2e6;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin: 1rem;
+  text-align: center;
+}
+
+.no-results {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-style: italic;
+  background: white;
+}
+
+/* ===== MODALES ESTILO FACTURASCRIPTS ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 4px;
+  padding: 1.5rem;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #dee2e6;
+}
+
+.modal-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1.25rem;
+  background: none;
+  -webkit-text-fill-color: #2c3e50;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* ===== FORMULARIO DE EDICIÓN EN MODAL ===== */
+.edit-formp {
+  background: white;
+  border-radius: 4px;
+  padding: 0;
+  width: 100%;
+}
+
+.edit-formp .form-group {
+  margin-bottom: 1rem;
+}
+
+.edit-formp .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.85rem;
+}
+
+.edit-formp .inpute {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+  color: #2c3e50;
+}
+
+.edit-formp .inpute:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.edit-formp .inpute:read-only {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.edit-formp .detalles h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 1.5rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.edit-formp .detalles table {
+  margin-top: 0.5rem;
+}
+
+.edit-formp .detalles tfoot {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.edit-formp .btn-add {
+  margin-top: 1rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.edit-formp .btn-add:hover {
+  background: #218838;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+  color: #2c3e50;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.btn-confirm {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: #0056b3;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #545b62;
+  transform: none;
+}
+
+/* ===== MEJORAS ESPECÍFICAS PARA FACTURASCRIPTS ===== */
+
+/* Header de la tabla más compacto */
+.product-table thead th {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.25rem;
+}
+
+/* Alternar colores de filas más sutil */
+.product-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* Botones de acción más compactos */
+.btn-edit, .btn-delete {
+  min-width: 28px;
+  min-height: 28px;
+}
+
+/* Badge para productos sin stock */
+.product-table td:contains("0") {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Estilo para precios */
+.product-table td:nth-child(5) {
+  font-weight: 600;
+  color: #28a745;
+}
+
+/* Separador visual entre secciones */
+.search-containerpd {
+  margin-bottom: 0.5rem;
+}
+
+/* Contenedor principal sin bordes redondeados */
+.order-list > * {
+  border-radius: 0 !important;
+}
+
+/* Efecto de focus en toda la fila */
+.product-table tbody tr:focus-within {
+  background: #e3f2fd;
+  outline: 2px solid #007bff;
+  outline-offset: -2px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .order-list {
+    padding: 0;
+  }
+  
+  .search-containerpd {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-inputpd {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .toolbar-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .container-t1 {
+    padding: 1rem;
+  }
+  
+  .product-table {
+    font-size: 0.8rem;
+  }
+  
+  .product-table th,
+  .product-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .modal-content {
+    margin: 0.5rem;
+    padding: 1rem;
+    max-width: 95%;
+  }
+  
+  .edit-formp .inpute {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .btn-confirm,
+  .btn-cancel {
+    width: 100%;
+  }
+  
+  /* Ocultar columnas menos importantes en móvil */
+  .product-table th:nth-child(3), /* Fecha */
+  .product-table td:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .container-t1 {
+    padding: 0.75rem;
+  }
+  
+  .search-containerpd {
+    padding: 0.75rem;
+  }
+  
+  .btn-add,
+  .btn-create-order {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .toolbar-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .toolbar-buttons button {
+    width: 100%;
+  }
+  
+  .product-table th:nth-child(4), /* Proveedor */
+  .product-table td:nth-child(4) {
+    display: none;
+  }
+  
+  .edit-formp .detalles h3 {
+    font-size: 1rem;
+  }
+}

@@ -1,0 +1,29 @@
+
+.config-container {
+ max-width: 700px;
+ margin: 20px auto;
+ background: white;
+ padding: 20px;
+ border-radius: 10px;
+ box-shadow: 0 2px 14px rgba(0,0,0,0.1);
+}
+.config-container label {
+ display: block;
+ margin-bottom: 10px;
+}
+.config-container input {
+ width: 100%;
+ padding: 8px;
+ margin-top: 4px;
+ border: 1px solid #ccc;
+ border-radius: 5px;
+}
+button {
+ background: #1976d2;
+ color: white;
+ border: none;
+ margin-top: 12px;
+ padding: 10px 15px;
+ border-radius: 6px;
+ cursor: pointer;
+}

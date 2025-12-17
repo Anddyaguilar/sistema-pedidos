@@ -1,0 +1,30 @@
+{
+  "name": "sistema",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google-cloud/vision": "^5.0.0",
+    "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.0",
+    "pdfkit": "^0.16.0",
+    "pdfmake": "^0.2.18",
+    "scribe.js-ocr": "^0.9.3",
+    "sharp": "^0.34.5",
+    "tesseract.js": "^6.0.0",
+    "winston": "^3.17.0"
+  }
+}

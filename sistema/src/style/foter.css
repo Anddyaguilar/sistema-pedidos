@@ -1,0 +1,26 @@
+.app-footer {
+  width: 100%;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 14px;
+  color: #4b5563;
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+}
+
+.app-footer strong {
+  color: #111827;
+}
+
+.footer-right span {
+  background: #f3f4f6;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+}
