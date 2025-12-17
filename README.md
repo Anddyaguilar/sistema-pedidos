@@ -13,8 +13,7 @@ DB_NAME=sistema_pedido
 
 FRONTEND_URL=http://localhost:3000
 
-# Configuración de Tesseract
-TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata
+
 
 # Entorno
 NODE_ENV=development
