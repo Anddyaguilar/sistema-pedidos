@@ -21,3 +21,6 @@ DEBUG=true
 
 JWT_SECRET=miclaveultrasecreta
 OPENAI_API_KEY=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
+
+version de nopde a  usar 22.12.0
+\version de npm a usar 11.6.3
