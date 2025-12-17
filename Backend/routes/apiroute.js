@@ -1,11 +1,12 @@
-const express = require('express');
-const multer = require('multer');
-const OCRController = require('../controllers/ai');
+// routes/apiroute.js
+const express = require("express");
+const multer = require("multer");
+const { extractProductsFromImage, saveProducts } = require("../controllers/ocrController");
 
 const router = express.Router();
-const upload = multer(); // almacenamiento en memoria
+const upload = multer();
 
-router.post('/extract', upload.single('image'), (req, res) => OCRController.extractText(req, res));
-router.post('/save-text', (req, res) => OCRController.saveText(req, res));
+router.post("/extract", upload.single("image"), extractProductsFromImage);
+router.post("/save", saveProducts);
 
-module.exports = router; // exportar router como CommonJS
+module.exports = router;

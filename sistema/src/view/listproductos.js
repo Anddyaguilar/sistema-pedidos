@@ -392,14 +392,13 @@ const ProductList = () => {
     if (!file) return;
 
     setLoadingImage(true);
-    setOcrPreview('');
-    setProductosDetectados([]);
+    setProductosDetectados([]); // limpiar anteriores
 
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('http://localhost:5001/api/ocr/extract', {
+      const response = await fetch('http://localhost:5001/api/ocr/extract', { // asegúrate del puerto
         method: 'POST',
         body: formData
       });
@@ -408,15 +407,15 @@ const ProductList = () => {
 
       const data = await response.json();
 
-      if (data.success) {
-        setOcrPreview(data.data.text);
-        setProductosDetectados([]); // parser opcional si quieres extraer productos
+      // Gemini devuelve JSON con productos
+      if (data.productos && Array.isArray(data.productos)) {
+        setProductosDetectados(data.productos);
       } else {
-        alert(`❌ Error OCR: ${data.error || 'No se pudo extraer texto'}`);
+        alert('❌ No se detectaron productos en la imagen');
       }
     } catch (error) {
-      console.error('Error OCR:', error);
-      alert('❌ Error al procesar la imagen OCR');
+      console.error('Error al procesar la imagen:', error);
+      alert('❌ Error al procesar la imagen con Gemini');
     } finally {
       setLoadingImage(false);
     }
@@ -907,14 +906,14 @@ const ProductList = () => {
                         onClick={() => handleEditProduct(product)}
                         title="Editar"
                       >
-                        ✏️ 
+                        ✏️
                       </button>
                       <button
                         className="btn-delete"
                         onClick={() => handleDeleteProduct(product.id_producto)}
                         title="Eliminar"
                       >
-                        🗑️ 
+                        🗑️
                       </button>
                     </td>
 
