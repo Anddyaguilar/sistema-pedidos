@@ -51,27 +51,30 @@ export async function extractProductsFromImage(req, res) {
 
     const imageData = req.file.buffer.toString("base64");
 
-    const prompt = `
-Analiza la imagen adjunta.
-Extrae todos los productos visibles y devuelve únicamente
-un JSON válido con esta estructura:
+const prompt = `
+Analiza la imagen adjunta y extrae todos los productos visibles.
+Devuelve únicamente un JSON válido, sin texto adicional, con esta estructura:
 
 {
   "productos": [
     {
-      "nombre_producto": "",
-      "codigo_original": "",
-      "precio": 0
+      "nombre_producto": "",  // Nombre del producto
+      "codigo_original": "",   // Código original del producto
+      "precio": 0              // Precio, puede ser decimal
     }
   ]
 }
 
-Reglas:
-- No incluyas texto fuera del JSON
-- No inventes datos
-- Si un campo no se detecta, usa null
-- El precio debe ser un número entero
+Reglas importantes:
+1. Si detectas "código original" o "código alterno" en la imagen, usa esos valores para llenar "codigo_original" en el JSON (campo de la BD).
+2. Si detectas "nombre del producto", "marca" o "descripción", combina estos y colócalos en "nombre_producto" en el JSON (campo de la BD).
+3. "precio" debe ser decimal si aparece con decimales.
+4. Si algún campo no se detecta, usa null.
+5. No inventes datos que no estén en la imagen.
+6. Devuelve solo el JSON, sin texto adicional ni explicaciones.
 `;
+
+
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -111,10 +114,18 @@ export async function saveProducts(req, res) {
     }
 
     for (const p of productos) {
-      const { nombre_producto, codigo_original, precio } = p;
+      // Mapear campos al esquema de la tabla
+      const nombre_producto = [p.nombre_producto, p.marca, p.descripcion]
+        .filter(Boolean)
+        .join(" | "); // concatenamos en un solo campo
+      const codigo_original = [p.codigo_original, p.codigo_alterno]
+        .filter(Boolean)
+        .join(" | "); // concatenamos códigos
+      const precio = parseFloat(p.precio) || 0;
+
       await pool.query(
         `INSERT INTO productos (nombre_producto, codigo_original, precio) VALUES (?, ?, ?)`,
-        [nombre_producto, codigo_original, precio || 0]
+        [nombre_producto, codigo_original, precio]
       );
     }
 
@@ -125,3 +136,4 @@ export async function saveProducts(req, res) {
     res.status(500).json({ success: false, error: err.message });
   }
 }
+
