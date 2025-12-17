@@ -8,7 +8,7 @@ import Proveedor from './view/listproveedores';
 import Pedidos from './view/Pedidos';
 import Login from './view/login';
 import Usuarios from './view/userlist';
-import ConfigView from './components/conf';  // <-- Nueva vista
+import ConfigView from './components/conf';  // Vista de configuración
 import LoadingPage from './components/loading'; 
 import Header from './components/header';
 import Footer from './components/footer';
@@ -54,17 +54,18 @@ const App = () => {
     <Router>
       <Routes>
         {/* LOGIN */}
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/configuracion" />} />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/status" replace />} />
+
+        {/* RUTA RAÍZ */}
+        <Route path="/" element={user ? <Navigate to="/status" replace /> : <Navigate to="/login" replace />} />
 
         {/* RUTAS DASHBOARD */}
-        <Route path="/" element={user ? <Navigate to="/configuracion" /> : <Navigate to="/login" />} />
-
-        <Route path="/configuracion" element={user ? <DashboardLayout><ConfigView /></DashboardLayout> : <Navigate to="/login" />} />
-        <Route path="/productos" element={user ? <DashboardLayout><Productos /></DashboardLayout> : <Navigate to="/login" />} />
-        <Route path="/status" element={user ? <DashboardLayout><Status /></DashboardLayout> : <Navigate to="/login" />} />
-        <Route path="/pedidos" element={user ? <DashboardLayout><Pedidos /></DashboardLayout> : <Navigate to="/login" />} />
-        <Route path="/usuarios" element={user ? <DashboardLayout><Usuarios /></DashboardLayout> : <Navigate to="/login" />} />
-        <Route path="/proveedores" element={user ? <DashboardLayout><Proveedor /></DashboardLayout> : <Navigate to="/login" />} />
+        <Route path="/status" element={user ? <DashboardLayout><Status /></DashboardLayout> : <Navigate to="/login" replace />} />
+        <Route path="/productos" element={user ? <DashboardLayout><Productos /></DashboardLayout> : <Navigate to="/login" replace />} />
+        <Route path="/pedidos" element={user ? <DashboardLayout><Pedidos /></DashboardLayout> : <Navigate to="/login" replace />} />
+        <Route path="/usuarios" element={user ? <DashboardLayout><Usuarios /></DashboardLayout> : <Navigate to="/login" replace />} />
+        <Route path="/proveedores" element={user ? <DashboardLayout><Proveedor /></DashboardLayout> : <Navigate to="/login" replace />} />
+        <Route path="/configuracion" element={user ? <DashboardLayout><ConfigView /></DashboardLayout> : <Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

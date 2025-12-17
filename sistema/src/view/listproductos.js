@@ -108,12 +108,13 @@ const NewProductModal = ({
   onDetectedProductsChange,
   onInsertDetectedProducts
 }) => {
-  // Propósito: Manejar cambios en los campos de productos detectados por OCR
+
+  // Manejar cambios en los campos de productos detectados por OCR
   const handleDetectedChange = (index, field, value) => {
     const updated = [...productosDetectados];
 
-    // Convertir a número si es precio o id_proveedor
-    if (field === 'precio' || field === 'id_proveedor') {
+    // Convertir a número solo el precio
+    if (field === 'precio') {
       const numValue = parseFloat(value);
       updated[index][field] = isNaN(numValue) ? 0 : numValue;
     } else {
@@ -128,21 +129,40 @@ const NewProductModal = ({
       <div className="modal-content">
         <h3>Nuevo Producto</h3>
 
+        {/* SELECT PRINCIPAL DE PROVEEDOR */}
         <div className="form-group">
           <label>Proveedor:</label>
           <select
             name="id_proveedor"
             value={formData.id_proveedor}
-            onChange={onFormChange}
+            onChange={e => {
+              const proveedorId = e.target.value;
+
+              // actualizar form principal
+              onFormChange(e);
+
+              // aplicar proveedor a TODOS los productos detectados
+              const updated = productosDetectados.map(prod => ({
+                ...prod,
+                id_proveedor: proveedorId
+              }));
+
+              onDetectedProductsChange(updated);
+            }}
           >
+            <option value="">Seleccionar proveedor</option>
             {providers.map(provider => (
-              <option key={provider.id_proveedor} value={provider.id_proveedor}>
+              <option
+                key={provider.id_proveedor}
+                value={provider.id_proveedor}
+              >
                 {provider.nombre_proveedor}
               </option>
             ))}
           </select>
         </div>
 
+        {/* SUBIR IMAGEN */}
         <div className="form-group">
           <label>Extraer datos desde imagen:</label>
           <input
@@ -153,6 +173,7 @@ const NewProductModal = ({
           />
         </div>
 
+        {/* OCR PREVIEW */}
         {ocrPreview && (
           <div className="ocr-preview">
             <label>Texto OCR extraído:</label>
@@ -160,15 +181,18 @@ const NewProductModal = ({
           </div>
         )}
 
+        {/* LOADING */}
         {loadingImage && (
           <div className="loading-message">
             <p>Procesando imagen... <span className="spinner"></span></p>
           </div>
         )}
 
+        {/* PRODUCTOS DETECTADOS */}
         {productosDetectados.length > 0 && (
           <div className="detected-products-preview">
             <h4>Productos detectados - revisa antes de insertar</h4>
+
             <div className="table-responsive">
               <table className="ocr-detected-table">
                 <thead>
@@ -186,38 +210,62 @@ const NewProductModal = ({
                         <input
                           className="ocr-input"
                           value={prod.codigo_original || ''}
-                          onChange={e => handleDetectedChange(idx, 'codigo_original', e.target.value)}
+                          onChange={e =>
+                            handleDetectedChange(
+                              idx,
+                              'codigo_original',
+                              e.target.value
+                            )
+                          }
                           placeholder="Código"
                         />
                       </td>
+
                       <td>
                         <input
                           className="ocr-input"
                           value={prod.nombre_producto || ''}
-                          onChange={e => handleDetectedChange(idx, 'nombre_producto', e.target.value)}
+                          onChange={e =>
+                            handleDetectedChange(
+                              idx,
+                              'nombre_producto',
+                              e.target.value
+                            )
+                          }
                           placeholder="Nombre"
                         />
                       </td>
+
                       <td>
                         <input
                           className="ocr-input"
                           type="number"
                           value={prod.precio || ''}
-                          onChange={e => handleDetectedChange(idx, 'precio', e.target.value)}
+                          onChange={e =>
+                            handleDetectedChange(
+                              idx,
+                              'precio',
+                              e.target.value
+                            )
+                          }
                           placeholder="Precio"
                           min="0"
                           step="0.01"
                         />
                       </td>
+
+                      {/* PROVEEDOR BLOQUEADO – TOMA EL SELECT PRINCIPAL */}
                       <td>
                         <select
                           className="ocr-select"
-                          value={prod.id_proveedor || ''}
-                          onChange={e => handleDetectedChange(idx, 'id_proveedor', e.target.value)}
+                          value={formData.id_proveedor}
+                          disabled
                         >
-                          <option value="">Seleccionar proveedor</option>
                           {providers.map(provider => (
-                            <option key={provider.id_proveedor} value={provider.id_proveedor}>
+                            <option
+                              key={provider.id_proveedor}
+                              value={provider.id_proveedor}
+                            >
                               {provider.nombre_proveedor}
                             </option>
                           ))}
@@ -228,6 +276,8 @@ const NewProductModal = ({
                 </tbody>
               </table>
             </div>
+
+            {/* ACCIONES OCR */}
             <div className="ocr-actions">
               <button
                 onClick={onInsertDetectedProducts}
@@ -239,12 +289,15 @@ const NewProductModal = ({
                     <span className="spinner"></span>
                     Insertando...
                   </>
-                ) : `Insertar ${productosDetectados.length} productos`}
+                ) : (
+                  `Insertar ${productosDetectados.length} productos`
+                )}
               </button>
             </div>
           </div>
         )}
 
+        {/* ACCIONES MODAL */}
         <div className="modal-actions">
           <button
             onClick={onSave}
@@ -255,8 +308,11 @@ const NewProductModal = ({
               <>
                 <span className="spinner"></span> Creando...
               </>
-            ) : 'Crear Producto'}
+            ) : (
+              'Crear Producto'
+            )}
           </button>
+
           <button
             onClick={onClose}
             disabled={isSubmitting}
@@ -462,62 +518,68 @@ const ProductList = () => {
 
   // ========== FUNCIÓN PARA INSERTAR PRODUCTOS DETECTADOS POR OCR ==========
   const handleInsertDetectedProducts = async () => {
-    if (!productosDetectados || productosDetectados.length === 0) {
-      alert('⚠️ No hay productos para insertar');
-      return;
-    }
+  if (!productosDetectados || productosDetectados.length === 0) {
+    alert('⚠️ No hay productos para insertar');
+    return;
+  }
 
-    // Validación estricta
-    const productosInvalidos = productosDetectados.filter(prod =>
-      !prod.codigo_original ||
-      !prod.nombre_producto ||
-      !prod.id_proveedor
+  // 🔒 FORZAR id_proveedor DESDE EL SELECT PRINCIPAL
+  const productosFinales = productosDetectados.map(prod => ({
+    ...prod,
+    id_proveedor: formData.id_proveedor
+  }));
+
+  // ✅ Validación estricta (YA CON PROVEEDOR FORZADO)
+  const productosInvalidos = productosFinales.filter(prod =>
+    !prod.codigo_original ||
+    !prod.nombre_producto ||
+    !prod.id_proveedor
+  );
+
+  if (productosInvalidos.length > 0) {
+    alert(`⚠️ ${productosInvalidos.length} productos tienen datos incompletos`);
+    console.table(productosInvalidos);
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    const responses = await Promise.all(
+      productosFinales.map(prod =>
+        axios.post(`${API_BASE_URL}/api/productos`, {
+          nombre_producto: prod.nombre_producto.trim(),
+          codigo_original: prod.codigo_original.trim(),
+          id_proveedor: Number(prod.id_proveedor),
+          precio: Number(prod.precio) || 0,
+          stock: Number(prod.stock) || 0
+        })
+      )
     );
 
-    if (productosInvalidos.length > 0) {
-      alert(`⚠️ ${productosInvalidos.length} productos tienen datos incompletos`);
-      console.table(productosInvalidos);
-      return;
-    }
+    const insertados = responses.filter(
+      r => r.status === 200 || r.status === 201
+    ).length;
 
-    setIsSubmitting(true);
+    alert(`✅ ${insertados} productos insertados correctamente`);
 
-    try {
-      const responses = await Promise.all(
-        productosDetectados.map(prod =>
-          axios.post(`${API_BASE_URL}/api/productos`, {
-            nombre_producto: prod.nombre_producto.trim(),
-            codigo_original: prod.codigo_original.trim(),
-            id_proveedor: Number(prod.id_proveedor),
-            precio: Number(prod.precio) || 0,
-            stock: Number(prod.stock) || 0
-          })
-        )
-      );
+    // Limpieza
+    setProductosDetectados([]);
+    setOcrPreview('');
+    setShowNewModal(false);
 
-      const insertados = responses.filter(
-        r => r.status === 200 || r.status === 201
-      ).length;
+    fetchData(searchTerm, currentPage);
 
-      alert(`✅ ${insertados} productos insertados correctamente`);
-
-      // Limpieza
-      setProductosDetectados([]);
-      setOcrPreview('');
-      setShowNewModal(false);
-
-      fetchData(searchTerm, currentPage);
-
-    } catch (error) {
-      console.error('Error al insertar:', error);
-      alert(
-        error.response?.data?.message ||
-        '❌ Error al insertar productos'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error al insertar:', error);
+    alert(
+      error.response?.data?.message ||
+      '❌ Error al insertar productos'
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // ========== FUNCIÓN PRINCIPAL PARA CARGAR DATOS ==========
   const fetchData = async (searchValue, page) => {

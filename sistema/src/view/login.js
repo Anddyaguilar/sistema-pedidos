@@ -24,7 +24,8 @@ const LoginForm = () => {
       console.log('Login OK');
       
       // REDIRIGIR: Navegar a la página de estado después de login exitoso
-      navigate('/status');
+    navigate('/dashboard', { replace: true });
+
     } catch (err) {
       console.error(err);
       // MOSTRAR ERROR: Usar error del contexto o mensaje genérico
