@@ -1,9 +1,9 @@
 {
-  "currency": "cordoba",
-  "phone": "85226694",
-  "email": "anddyaguilar07@gmail.com",
-  "address": "comarca sangregorio de la iglesia apostolica 10mtr norte",
-  "company_name": "Repuestos Holfer",
-  "ruc": "qwdqwdqw",
-  "logo_path": "/uploads/logo.png"
+  "company_name": "SIGPRO",
+  "ruc": "04124056500C",
+  "address": "DIRECCION DELA EMPRESA",
+  "phone": "55045733",
+  "email": "SIGPRO@GMAIL.COM",
+  "currency": "C$",
+  "logo_path": "/uploads/logo.jpg"
 }

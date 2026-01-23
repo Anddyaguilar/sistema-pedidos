@@ -18,9 +18,14 @@ const mostrarDetallesPedido = async (req, res) => {
 
   try {
     const query = `
-      SELECT dp.id_detalle, dp.id_producto, dp.cantidad, dp.precio_unitario, p.nombre_producto
+      SELECT 
+        dp.id_detalle, 
+        dp.id_producto, 
+        dp.cantidad, 
+        dp.precio_unitario, 
+        IFNULL(p.nombre_producto, 'Producto no disponible') AS nombre_producto
       FROM detalles_pedido dp
-      JOIN productos p ON dp.id_producto = p.id_producto
+      LEFT JOIN productos p ON dp.id_producto = p.id_producto
       WHERE dp.id_pedido = ?`;
 
     const [results] = await db.query(query, [id]);
@@ -28,10 +33,15 @@ const mostrarDetallesPedido = async (req, res) => {
     if (results.length === 0) {
       return res.status(404).json({ error: 'No se encontraron detalles para este pedido' });
     }
+
+    console.log("Detalles obtenidos:", results); // Para debug
     res.json(results);
   } catch (error) {
     console.error('Error al obtener los detalles del pedido:', error);
-    res.status(500).json({ error: 'Error al obtener los detalles del pedido', details: error.message });
+    res.status(500).json({ 
+      error: 'Error al obtener los detalles del pedido', 
+      details: error.message 
+    });
   }
 };
 
@@ -65,36 +75,105 @@ const obtenerPedidoConDetalles = async (req, res) => {
 
 // Crear un nuevo pedido
 const crearPedido = async (req, res) => {
+  console.log('📥 BODY RECIBIDO:', req.body);
+  console.log('👤 USER JWT:', req.user);
+
   const { fecha_pedido, id_proveedor, detalles } = req.body;
 
-  if (!fecha_pedido || !id_proveedor || !detalles || detalles.length === 0) {
-    return res.status(400).json({ error: "Todos los campos son obligatorios." });
+  // Validación básica
+  if (!fecha_pedido || !id_proveedor || !Array.isArray(detalles) || detalles.length === 0) {
+    console.log('❌ Error: datos incompletos o sin detalles');
+    return res.status(400).json({ error: 'Datos incompletos o sin detalles' });
   }
 
   try {
     await db.query('BEGIN');
 
-    const queryPedido = 'INSERT INTO pedido (fecha_pedido, id_proveedor, total) VALUES (?, ?, 0)';
-    const [result] = await db.query(queryPedido, [fecha_pedido, id_proveedor]);
-    const id_pedido = result.insertId;
+    const id_usuario = req.user?.id;
+    if (!id_usuario) {
+      await db.query('ROLLBACK');
+      console.log('❌ Usuario no identificado');
+      return res.status(400).json({ error: 'Usuario no autenticado' });
+    }
 
-    const detallesValues = detalles.map(detalle => [id_pedido, detalle.id_producto, detalle.cantidad, detalle.precio_unitario]);
-    const queryDetalles = 'INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_unitario) VALUES ?';
-    await db.query(queryDetalles, [detallesValues]);
+    console.log('🧾 Detalles recibidos CRUDOS:', detalles);
 
-    await db.query(`
-      UPDATE pedido 
-      SET total = (SELECT COALESCE(SUM(cantidad * precio_unitario), 0) FROM detalles_pedido WHERE id_pedido = ?)
-      WHERE id_pedido = ?`, [id_pedido, id_pedido]);
+    // Filtrar y normalizar detalles válidos
+    const detallesValues = detalles
+      .map(d => ({
+        id_producto: Number(d.id_producto),
+        cantidad: Number(d.cantidad),
+        precio_unitario: Number(d.precio_unitario)
+      }))
+      .filter(d =>
+        Number.isInteger(d.id_producto) &&
+        d.id_producto > 0 &&
+        !isNaN(d.cantidad) &&
+        d.cantidad > 0 &&
+        !isNaN(d.precio_unitario) &&
+        d.precio_unitario > 0
+      );
+
+    console.log('✅ Detalles válidos BACKEND:', detallesValues);
+
+    if (detallesValues.length === 0) {
+      await db.query('ROLLBACK');
+      console.log('❌ No hay detalles válidos');
+      return res.status(400).json({
+        error: 'Los productos enviados no son válidos',
+        detalles_recibidos: detalles
+      });
+    }
+
+    // INSERT en pedido usando id_users
+    const [pedidoResult] = await db.query(
+      'INSERT INTO pedido (fecha_pedido, id_proveedor, total, id_user) VALUES (?, ?, 0, ?)',
+      [fecha_pedido, id_proveedor, id_usuario]
+    );
+
+    const id_pedido = pedidoResult.insertId;
+    console.log('🆕 Pedido creado con ID:', id_pedido);
+
+    // Preparar detalles para insert múltiple
+    const insertValues = detallesValues.map(d => [
+      id_pedido,
+      d.id_producto,
+      d.cantidad,
+      d.precio_unitario
+    ]);
+
+    await db.query(
+      'INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_unitario) VALUES ?',
+      [insertValues]
+    );
+
+    // Actualizar total del pedido
+    await db.query(
+      `UPDATE pedido 
+       SET total = (
+         SELECT COALESCE(SUM(cantidad * precio_unitario), 0)
+         FROM detalles_pedido
+         WHERE id_pedido = ?
+       )
+       WHERE id_pedido = ?`,
+      [id_pedido, id_pedido]
+    );
 
     await db.query('COMMIT');
-    res.json({ message: 'Pedido creado con éxito', id_pedido });
+
+    console.log('✅ Pedido creado correctamente');
+
+    res.status(201).json({ message: 'Pedido creado', id_pedido });
+
   } catch (error) {
     await db.query('ROLLBACK');
-    console.error('Error al crear el pedido:', error);
-    res.status(500).json({ error: 'Error al crear el pedido', details: error.message });
+    console.error('🔥 ERROR BACKEND:', error);
+    res.status(500).json({ error: 'Error interno del servidor', details: error.message });
   }
 };
+
+
+
 
 // Descargar PDF de un pedido
 
@@ -103,37 +182,49 @@ const fs = require('fs');
 // descargar pdf
 const descargarPDF = async (req, res) => {
   const { id } = req.params;
+
   try {
     // 1. Obtener datos del pedido
     const [pedido] = await db.query('SELECT * FROM pedido WHERE id_pedido = ?', [id]);
-    if (!pedido || pedido.length === 0) return res.status(404).json({ error: 'El pedido no existe' });
+    if (!pedido || pedido.length === 0) {
+      return res.status(404).json({ error: 'El pedido no existe' });
+    }
 
-    // 2. Nombre del proveedor
+    // 2. Obtener datos de la empresa desde system_config
+    const [empresa] = await db.query('SELECT * FROM system_config LIMIT 1');
+    const comp = (empresa && empresa[0]) ? empresa[0] : {};
+
+    const companyName = comp.company_name || 'Nombre de la empresa';
+    const ruc = comp.ruc || '';
+    const address = comp.address || '';
+    const email = comp.email || '';
+    const phone = comp.phone || '';
+    const currency = comp.currency || 'C$';
+    const logoPath = comp.logo_path && fs.existsSync(comp.logo_path) ? comp.logo_path : null;
+
+    // 3. Nombre del proveedor
     let nombreProveedor = "Proveedor no especificado";
-    try {
-      const [proveedor] = await db.query(
-        'SELECT nombre_proveedor FROM proveedor WHERE id_proveedor = ?',
-        [pedido[0].id_proveedor]
-      );
-      if (proveedor && proveedor.length > 0) nombreProveedor = proveedor[0].nombre_proveedor;
-    } catch (err) { console.warn('No se pudo obtener el nombre del proveedor:', err.message); }
+    const [proveedor] = await db.query(
+      'SELECT nombre_proveedor FROM proveedor WHERE id_proveedor = ?',
+      [pedido[0].id_proveedor]
+    );
+    if (proveedor && proveedor.length > 0) nombreProveedor = proveedor[0].nombre_proveedor;
 
-    // 3. Detalles del pedido
+    // 4. Detalles del pedido
     const [detalles] = await db.query(`
       SELECT dp.cantidad, dp.precio_unitario, p.nombre_producto, p.codigo_original
       FROM detalles_pedido dp
       JOIN productos p ON dp.id_producto = p.id_producto
       WHERE dp.id_pedido = ?`, [id]);
 
-    // 4. Configurar PDF
-    const PDFDocument = require('pdfkit');
+    // 5. Configurar PDF
     const doc = new PDFDocument({
       margin: 40,
       size: 'A4',
       layout: 'portrait',
       info: {
         Title: `Pedido ${id}`,
-        Author: 'Sistema de Pedidos Repuestos Holfer'
+        Author: companyName
       }
     });
 
@@ -145,80 +236,82 @@ const descargarPDF = async (req, res) => {
     const marginBottom = 40;
     const tableWidth = pageWidth - 80;
     const tableLeftX = 40;
+    const rowHeight = 27;
 
-    // Aumentar altura de las filas
     const colWidths = {
       num: 25,
-      codigo: 80,           // Reducido de 90 a 80
-      producto: 200,        // Reducido de 220 a 200
+      codigo: 80,
+      producto: 200,
       cantidad: 45,
       precio: 70,
-      subtotal: 80          // Aumentado de 70 a 80
+      subtotal: 80
     };
 
-    const rowHeight = 27;
     let currentY = 120;
 
-    // Función para agregar header en cada página
+    // Función para agregar header de página
     function addHeader() {
-      // Logo y información de la empresa
-      doc.fontSize(16).font('Helvetica-Bold')
-        .text('REPUESTOS HOLFER JINOTEPE', 40, 40, { align: 'center' });
+      // Logo
+      if (logoPath) {
+        try {
+          doc.image(logoPath, tableLeftX, 40, { width: 80, height: 50, fit: [80,50] });
+        } catch (err) {
+          console.warn('Error al cargar logo:', err.message);
+        }
+      }
 
-      doc.fontSize(12).font('Helvetica')
-        .text(`PEDIDO N°: ${id}`, 40, 65, { align: 'center' });
+      // Datos de la empresa
+      doc.fontSize(12).font('Helvetica-Bold')
+        .text(companyName, logoPath ? 130 : tableLeftX, 40, { align: 'left', width: pageWidth - 170 });
 
-      // Información del pedido en dos columnas
-      doc.fontSize(10)
-        .text(`FECHA: ${new Date(pedido[0].fecha_pedido).toLocaleDateString()}`, 40, 85)
-        .text(`PROVEEDOR: ${nombreProveedor}`, pageWidth / 2, 85);
+      doc.fontSize(9).font('Helvetica')
+        .text(`RUC: ${ruc}`, logoPath ? 130 : tableLeftX, 60)
+        .text(`Dirección: ${address}`, logoPath ? 130 : tableLeftX, 72, { width: pageWidth - 170 })
+        .text(`Email: ${email}`, logoPath ? 130 : tableLeftX, 84)
+        .text(`Tel: ${phone}`, logoPath ? 130 : tableLeftX, 96);
+
+      // Datos del pedido
+      doc.fontSize(10).font('Helvetica-Bold')
+        .text(`PEDIDO N°: ${id}`, tableLeftX, 120)
+        .font('Helvetica')
+        .text(`Fecha: ${new Date(pedido[0].fecha_pedido).toLocaleDateString()}`, tableLeftX, 135)
+        .text(`Proveedor: ${nombreProveedor}`, tableLeftX, 150);
 
       // Línea separadora
-      doc.moveTo(40, 105).lineTo(pageWidth - 40, 105).stroke('#333333');
+      doc.moveTo(tableLeftX, 165).lineTo(pageWidth - 40, 165).stroke('#333333');
+
+      currentY = 170;
+      drawTableHeader(currentY);
+      currentY += rowHeight;
     }
 
-    // Función para revisar si se necesita nueva página
+    function drawTableHeader(y) {
+      doc.rect(tableLeftX, y, tableWidth, rowHeight).fill('#1a4693');
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
+
+      doc.text('#', tableLeftX + 5, y + 7, { width: colWidths.num, align: 'center' })
+        .text('CÓDIGO', tableLeftX + colWidths.num, y + 7, { width: colWidths.codigo, align: 'center' })
+        .text('DESCRIPCIÓN', tableLeftX + colWidths.num + colWidths.codigo, y + 7, { width: colWidths.producto, align: 'center' })
+        .text('CANT.', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto, y + 7, { width: colWidths.cantidad, align: 'center' })
+        .text('PRECIO', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, y + 7, { width: colWidths.precio, align: 'right' })
+        .text('SUBTOTAL', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, y + 7, { width: colWidths.subtotal, align: 'right' });
+    }
+
     function checkPageHeight(y, heightNeeded = rowHeight) {
       if (y + heightNeeded > pageHeight - marginBottom) {
         doc.addPage();
-        currentY = 40;
         addHeader();
-
-        // Redibujar encabezado de tabla
-        currentY = drawTableHeader(currentY);
         return currentY;
       }
       return y;
     }
 
-    // Función para dibujar el encabezado de la tabla
-    function drawTableHeader(y) {
-      // Fondo del encabezado
-      doc.rect(tableLeftX, y, tableWidth, rowHeight).fill('#1a4693');
-
-      // Texto del encabezado
-      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
-
-      doc.text('#', tableLeftX + 5, y + 7, { width: colWidths.num, align: 'center' })
-        .text('CÓDIGO', tableLeftX + colWidths.num, y + 7, { width: colWidths.codigo, align: 'center' })
-        .text('DESCRIPCIÓN DEL PRODUCTO', tableLeftX + colWidths.num + colWidths.codigo, y + 7, { width: colWidths.producto, align: 'center' })
-        .text('CANT.', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto, y + 7, { width: colWidths.cantidad, align: 'center' })
-        .text('PRECIO', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, y + 7, { width: colWidths.precio, align: 'right' })
-        .text('SUBTOTAL', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, y + 7, { width: colWidths.subtotal, align: 'right' });
-
-      return y + rowHeight;
-    }
-
-    // 5. Encabezado inicial
+    // Inicializar header
     addHeader();
 
-    // 6. Tabla encabezado
-    currentY = drawTableHeader(currentY);
-
-    // 7. Filas de la tabla
+    // Filas de la tabla
     let totalGeneral = 0;
-    for (let i = 0; i < detalles.length; i++) {
-      const detalle = detalles[i];
+    detalles.forEach((detalle, i) => {
       const cantidad = Number(detalle.cantidad) || 0;
       const precio = Number(detalle.precio_unitario) || 0;
       const subtotal = cantidad * precio;
@@ -226,43 +319,44 @@ const descargarPDF = async (req, res) => {
 
       currentY = checkPageHeight(currentY, rowHeight);
 
-      // Alternar colores de fondo para mejor legibilidad
-      if (i % 2 === 0) {
-        doc.rect(tableLeftX, currentY, tableWidth, rowHeight).fill('#f8f9fa');
-      }
+      // Alternar colores
+      if (i % 2 === 0) doc.rect(tableLeftX, currentY, tableWidth, rowHeight).fill('#f8f9fa');
 
-      // Contenido de la fila - Ajustado para mayor altura
-      doc.fillColor('#000000').font('Helvetica').fontSize(10);
-      doc.text((i + 1).toString(), tableLeftX + 5, currentY + 7, { width: colWidths.num, align: 'center' })
+      // Texto de la fila
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text(i + 1, tableLeftX + 5, currentY + 7, { width: colWidths.num, align: 'center' })
         .text(detalle.codigo_original || 'N/A', tableLeftX + colWidths.num, currentY + 7, { width: colWidths.codigo })
-        .text(detalle.nombre_producto || '', tableLeftX + colWidths.num + colWidths.codigo, currentY + 7, { width: colWidths.producto })
-        .text(cantidad.toString(), tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto, currentY + 7, { width: colWidths.cantidad, align: 'center' })
-        .text(`C$${precio.toFixed(2)}`, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, currentY + 7, { width: colWidths.precio, align: 'right' })
-        .text(`C$${subtotal.toFixed(2)}`, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, currentY + 7, { width: colWidths.subtotal, align: 'right' });
+        .text(detalle.nombre_producto || '', tableLeftX + colWidths.num + colWidths.codigo, currentY + 7, { width: colWidths.producto, ellipsis: true })
+        .text(cantidad, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto, currentY + 7, { width: colWidths.cantidad, align: 'center' })
+        .text(`${currency}${precio.toFixed(2)}`, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, currentY + 7, { width: colWidths.precio, align: 'right' })
+        .text(`${currency}${subtotal.toFixed(2)}`, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, currentY + 7, { width: colWidths.subtotal, align: 'right' });
 
       currentY += rowHeight;
-    }
+    });
 
-    // 8. Fila de total
-    currentY = checkPageHeight(currentY, rowHeight + 5);
+    // Total general
+    doc.font('Helvetica-Bold').fontSize(12)
+  .text(
+    'TOTAL:',
+    tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad,
+    currentY,
+    { width: colWidths.precio, align: 'right' }
+  )
+  .text(
+    `${currency}${totalGeneral.toFixed(2)}`,
+    tableLeftX
+      + colWidths.num
+      + colWidths.codigo
+      + colWidths.producto
+      + colWidths.cantidad
+      + colWidths.precio,
+    currentY,
+    { width: colWidths.subtotal, align: 'right' }
+  );
 
-    // Línea separadora doble
-    doc.moveTo(tableLeftX, currentY).lineTo(tableLeftX + tableWidth, currentY).stroke('#333333');
-    doc.moveTo(tableLeftX, currentY + 1).lineTo(tableLeftX + tableWidth, currentY + 1).stroke('#333333');
-    currentY += 10;
+currentY += 25; // 👈 reserva espacio posterior
 
-    // Fila de total
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000')
-      .text('TOTAL GENERAL:', tableLeftX + colWidths.num + colWidths.codigo, currentY, {
-        width: colWidths.producto + colWidths.cantidad + colWidths.precio - 10,
-        align: 'right'
-      })
-      .text(`C$${totalGeneral.toFixed(2)}`, tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, currentY, {
-        width: colWidths.subtotal,
-        align: 'right'
-      });
-
-    // 9. Finalizar PDF (SIN PIE DE PÁGINA)
+    // Finalizar PDF
     doc.pipe(res);
     doc.end();
 
@@ -271,6 +365,7 @@ const descargarPDF = async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: 'Error al generar el PDF', message: error.message });
   }
 };
+
 
 // Eliminar un pedido y sus detalles
 const eliminarPedido = async (req, res) => {
@@ -298,41 +393,33 @@ const eliminarPedido = async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar el pedido', details: error.message });
   }
 };
+
+
+// Obtener cantidad de pedidos por estado
 const obtenerEstadisticas = async (req, res) => {
   try {
-    const hoy = new Date().toISOString().split('T')[0];
-
-    // Consulta para pedidos hoy
-    const [pedidosHoy] = await db.query(
-      `SELECT COUNT(*) as total FROM pedido 
-       WHERE DATE(fecha_pedido) = ? AND estado = 'completado'`,
-      [hoy]
-    );
-
-    // Consulta para ingresos hoy
-    const [ingresosHoy] = await db.query(
-      `SELECT COALESCE(SUM(total), 0) as total FROM pedido 
-       WHERE DATE(fecha_pedido) = ? AND estado = 'completado'`,
-      [hoy]
-    );
-
-    // Consulta para pedidos pendientes
     const [pendientes] = await db.query(
       `SELECT COUNT(*) as total FROM pedido WHERE estado = 'pendiente'`
     );
+    const [aprobados] = await db.query(
+      `SELECT COUNT(*) as total FROM pedido WHERE estado = 'aprobado'`
+    );
+    const [cancelados] = await db.query(
+      `SELECT COUNT(*) as total FROM pedido WHERE estado = 'anulado'`
+    );
 
     res.json({
-      pedidosHoy: pedidosHoy[0].total,
-      ingresosHoy: ingresosHoy[0].total,
       pedidosPendientes: pendientes[0].total,
+      pedidosAprobados: aprobados[0].total,
+      pedidosCancelados: cancelados[0].total,
       ultimaActualizacion: new Date().toISOString()
     });
-
   } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener estadísticas por estado:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas', details: error.message });
   }
 };
+
 // Función para obtener detalles y productos asociados a un pedido
 const obtenerDetallesConProductos = async (req, res) => {
   const idPedido = req.params.id;
@@ -365,65 +452,41 @@ const obtenerDetallesConProductos = async (req, res) => {
 ///actualizar pedido
 const actualizarPedido = async (req, res) => {
   const { id } = req.params;
-  const { fecha_pedido, id_proveedor, detalles } = req.body;
+  const { estado, detalles, eliminados } = req.body;
 
-  if (!fecha_pedido || !id_proveedor || !Array.isArray(detalles)) {
+  if (!estado || !Array.isArray(detalles)) {
     return res.status(400).json({ error: 'Datos incompletos o inválidos' });
   }
 
   try {
-    // Actualizar cabecera
+    await db.query('BEGIN');
+
+    // 1️⃣ Eliminar detalles marcados
+    if (Array.isArray(eliminados) && eliminados.length > 0) {
+      await db.query('DELETE FROM detalles_pedido WHERE id_detalle IN (?) AND id_pedido = ?', [eliminados, id]);
+    }
+
+    // 2️⃣ Actualizar solo el estado
     await db.query(
-      'UPDATE pedido SET fecha_pedido = ?, id_proveedor = ? WHERE id_pedido = ?',
-      [fecha_pedido, id_proveedor, id]
+      'UPDATE pedido SET estado = ? WHERE id_pedido = ?',
+      [estado, id]
     );
 
+    // 3️⃣ Insertar o actualizar detalles
     for (const item of detalles) {
       const { id_detalle, id_producto, cantidad } = item;
 
-      // Obtener precio desde productos
-      const [productoRows] = await db.query(
-        'SELECT precio FROM productos WHERE id_producto = ?',
-        [id_producto]
-      );
-
+      const [productoRows] = await db.query('SELECT precio FROM productos WHERE id_producto = ?', [id_producto]);
       if (!productoRows || productoRows.length === 0) continue;
 
       const precio_unitario = productoRows[0].precio;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       if (id_detalle) {
-        // Si ya existe, hacer UPDATE
         await db.query(
           'UPDATE detalles_pedido SET id_producto = ?, cantidad = ?, precio_unitario = ? WHERE id_detalle = ? AND id_pedido = ?',
           [id_producto, cantidad, precio_unitario, id_detalle, id]
         );
       } else {
-        // Si no tiene id_detalle, es nuevo → INSERT
         await db.query(
           'INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
           [id, id_producto, cantidad, precio_unitario]
@@ -431,13 +494,25 @@ const actualizarPedido = async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: '✅ Pedido actualizado correctamente' });
+    // 4️⃣ Actualizar total
+    await db.query(
+      `UPDATE pedido 
+       SET total = (SELECT COALESCE(SUM(cantidad * precio_unitario),0) FROM detalles_pedido WHERE id_pedido = ?)
+       WHERE id_pedido = ?`,
+      [id, id]
+    );
+
+    await db.query('COMMIT');
+    res.status(200).json({ message: 'Pedido actualizado correctamente' });
   } catch (error) {
-    console.error('🔥 Error al actualizar el pedido:', error.message);
-    console.error(error);
-    res.status(500).json({ error: 'Error al actualizar el pedido' });
+    await db.query('ROLLBACK');
+    console.error('Error al actualizar el pedido:', error.message);
+    res.status(500).json({ error: 'Error al actualizar el pedido', details: error.message });
   }
 };
+
+
+
 // optener producto por proveedor 
 const obtenerProductosPorProveedor = async (req, res) => {
   const proveedorId = parseInt(req.params.id);

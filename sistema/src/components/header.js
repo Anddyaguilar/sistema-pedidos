@@ -10,7 +10,9 @@ import {
   FaSignOutAlt,
   FaChartPie,
   FaCog,
-  FaBell
+  FaBell,
+  FaSun,
+  FaMoon
 } from "react-icons/fa";
 import { useAuth } from "../view/authcontext";
 import "../style/style.css";
@@ -54,6 +56,13 @@ const Header = () => {
     };
   }, []);
 
+  // Función para determinar si es de día o de noche
+  const isDayTime = (date) => {
+    const hour = date.getHours();
+    // Consideramos día de 6:00 AM a 6:00 PM
+    return hour >= 6 && hour < 18;
+  };
+
   const formatTime = (date) =>
     date.toLocaleTimeString("es-NI", { hour: "2-digit", minute: "2-digit" });
 
@@ -79,7 +88,7 @@ const Header = () => {
 
   const menuItems = [
     { path: "/status", icon: FaHome, label: "Dashboard", badge: null },
-    { path: "/pedidos", icon: FaShoppingCart, label: "Pedidos", badge: 3 },
+    { path: "/pedidos", icon: FaShoppingCart, label: "Pedidos", badge: null },
     { path: "/productos", icon: FaBox, label: "Productos", badge: null },
     { path: "/proveedores", icon: FaTruck, label: "Proveedores", badge: null },
     { path: "/usuarios", icon: FaUsers, label: "Usuarios", badge: null },
@@ -108,10 +117,9 @@ const Header = () => {
               </div>
               <div className="logo-text">
                 <h1 className="brand-name">
-                  Sistema Pedidos {config.company_name || "Holfer"}
+                  Sistema Pedidos {config.company_name || "SIGPRO"}
                 </h1>
                 <span className="brand-subtitle">Enterprise Dashboard</span>
-                
               </div>
             </div>
           </div>
@@ -143,10 +151,15 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Time */}
+            {/* Time - MANTENIENDO EL MISMO DISEÑO */}
             <div className="time-display">
               <div className="time-icon">
-                <i className="fas fa-clock"></i>
+                {/* Reemplazamos el ícono de reloj con sol o luna */}
+                {isDayTime(currentTime) ? (
+                  <FaSun className="time-sun-icon" />
+                ) : (
+                  <FaMoon className="time-moon-icon" />
+                )}
               </div>
               <div className="time-info">
                 <div className="current-time">{formatTime(currentTime)}</div>
@@ -156,10 +169,6 @@ const Header = () => {
 
             {/* Quick Actions */}
             <div className="quick-actions">
-              <button className="action-btn notification-btn">
-                <FaBell />
-                <span className="notification-badge">2</span>
-              </button>
               <Link
                 to="/configuracion"
                 className="action-btn settings-btn"
@@ -277,7 +286,7 @@ const Header = () => {
             <div className="logo-icon">
               <FaChartPie />
             </div>
-            <span className="brand-text">{config.company_name || "Holfer System"}</span>
+            <span className="brand-text">{config.company_name || "SIGPRO System"}</span>
           </div>
           <button
             className="close-mobile-menu"

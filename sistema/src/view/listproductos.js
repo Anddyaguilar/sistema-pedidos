@@ -300,20 +300,6 @@ const NewProductModal = ({
         {/* ACCIONES MODAL */}
         <div className="modal-actions">
           <button
-            onClick={onSave}
-            disabled={isSubmitting}
-            className="btn-confirm"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="spinner"></span> Creando...
-              </>
-            ) : (
-              'Crear Producto'
-            )}
-          </button>
-
-          <button
             onClick={onClose}
             disabled={isSubmitting}
             className="btn-cancel"
@@ -518,68 +504,68 @@ const ProductList = () => {
 
   // ========== FUNCIÓN PARA INSERTAR PRODUCTOS DETECTADOS POR OCR ==========
   const handleInsertDetectedProducts = async () => {
-  if (!productosDetectados || productosDetectados.length === 0) {
-    alert('⚠️ No hay productos para insertar');
-    return;
-  }
+    if (!productosDetectados || productosDetectados.length === 0) {
+      alert('⚠️ No hay productos para insertar');
+      return;
+    }
 
-  // 🔒 FORZAR id_proveedor DESDE EL SELECT PRINCIPAL
-  const productosFinales = productosDetectados.map(prod => ({
-    ...prod,
-    id_proveedor: formData.id_proveedor
-  }));
+    // 🔒 FORZAR id_proveedor DESDE EL SELECT PRINCIPAL
+    const productosFinales = productosDetectados.map(prod => ({
+      ...prod,
+      id_proveedor: formData.id_proveedor
+    }));
 
-  // ✅ Validación estricta (YA CON PROVEEDOR FORZADO)
-  const productosInvalidos = productosFinales.filter(prod =>
-    !prod.codigo_original ||
-    !prod.nombre_producto ||
-    !prod.id_proveedor
-  );
-
-  if (productosInvalidos.length > 0) {
-    alert(`⚠️ ${productosInvalidos.length} productos tienen datos incompletos`);
-    console.table(productosInvalidos);
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    const responses = await Promise.all(
-      productosFinales.map(prod =>
-        axios.post(`${API_BASE_URL}/api/productos`, {
-          nombre_producto: prod.nombre_producto.trim(),
-          codigo_original: prod.codigo_original.trim(),
-          id_proveedor: Number(prod.id_proveedor),
-          precio: Number(prod.precio) || 0,
-          stock: Number(prod.stock) || 0
-        })
-      )
+    // ✅ Validación estricta (YA CON PROVEEDOR FORZADO)
+    const productosInvalidos = productosFinales.filter(prod =>
+      !prod.codigo_original ||
+      !prod.nombre_producto ||
+      !prod.id_proveedor
     );
 
-    const insertados = responses.filter(
-      r => r.status === 200 || r.status === 201
-    ).length;
+    if (productosInvalidos.length > 0) {
+      alert(`⚠️ ${productosInvalidos.length} productos tienen datos incompletos`);
+      console.table(productosInvalidos);
+      return;
+    }
 
-    alert(`✅ ${insertados} productos insertados correctamente`);
+    setIsSubmitting(true);
 
-    // Limpieza
-    setProductosDetectados([]);
-    setOcrPreview('');
-    setShowNewModal(false);
+    try {
+      const responses = await Promise.all(
+        productosFinales.map(prod =>
+          axios.post(`${API_BASE_URL}/api/productos`, {
+            nombre_producto: prod.nombre_producto.trim(),
+            codigo_original: prod.codigo_original.trim(),
+            id_proveedor: Number(prod.id_proveedor),
+            precio: Number(prod.precio) || 0,
+            stock: Number(prod.stock) || 0
+          })
+        )
+      );
 
-    fetchData(searchTerm, currentPage);
+      const insertados = responses.filter(
+        r => r.status === 200 || r.status === 201
+      ).length;
 
-  } catch (error) {
-    console.error('Error al insertar:', error);
-    alert(
-      error.response?.data?.message ||
-      '❌ Error al insertar productos'
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      alert(`✅ ${insertados} productos insertados correctamente`);
+
+      // Limpieza
+      setProductosDetectados([]);
+      setOcrPreview('');
+      setShowNewModal(false);
+
+      fetchData(searchTerm, currentPage);
+
+    } catch (error) {
+      console.error('Error al insertar:', error);
+      alert(
+        error.response?.data?.message ||
+        '❌ Error al insertar productos'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // ========== FUNCIÓN PRINCIPAL PARA CARGAR DATOS ==========
   const fetchData = async (searchValue, page) => {
@@ -707,33 +693,87 @@ const ProductList = () => {
   // ========== FUNCIÓN PARA CREAR PEDIDOS ==========
   const createOrders = async () => {
     setIsSubmitting(true);
+
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No hay token. Inicia sesión.');
+
       const fecha = new Date().toISOString().split('T')[0];
-      const results = await Promise.all(
-        Object.keys(groupedOrders).map(providerId => {
-          const detalles = groupedOrders[providerId].items.map(item => ({
-            id_producto: item.productId,
-            cantidad: item.quantity,
-            precio_unitario: item.price
-          }));
-          return axios.post(`${API_BASE_URL}/api/pedidos`, {
-            id_proveedor: Number(providerId),
-            fecha_pedido: fecha,
-            detalles
-          });
-        })
-      );
-      alert(`✅ ${results.length} pedido(s) creados exitosamente`);
-      setSelectedItems({});
+
+      console.log('📦 groupedOrders COMPLETO:', groupedOrders);
+
+      for (const providerId of Object.keys(groupedOrders)) {
+        console.log('🏷️ Proveedor actual:', providerId);
+
+        const items = groupedOrders[providerId].items;
+        console.log('🛒 Items del proveedor:', items);
+
+        const detalles = items.map(item => ({
+          // ⚠️ AJUSTA id_producto según el console.log
+          id_producto: Number(
+            item.id_producto ??
+            item.productId ??
+            item.id ??
+            item.product?.id
+          ),
+          cantidad: Number(item.quantity),
+          precio_unitario: Number(item.price)
+        }));
+
+        console.log('🧾 Detalles construidos:', detalles);
+
+        // Validación frontend
+        const detallesValidos = detalles.filter(
+          d =>
+            Number.isInteger(d.id_producto) &&
+            d.id_producto > 0 &&
+            !isNaN(d.cantidad) &&
+            d.cantidad > 0 &&
+            !isNaN(d.precio_unitario) &&
+            d.precio_unitario > 0
+        );
+
+        console.log('✅ Detalles válidos:', detallesValidos);
+
+        if (detallesValidos.length === 0) {
+          throw new Error(`Proveedor ${providerId} sin productos válidos`);
+        }
+
+        const payload = {
+          id_proveedor: Number(providerId),
+          fecha_pedido: fecha,
+          detalles: detallesValidos
+        };
+
+        console.log('📤 Payload enviado al backend:', payload);
+
+        const response = await axios.post(
+          `${API_BASE_URL}/api/pedidos`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        console.log('📥 Respuesta backend:', response.data);
+      }
+
+      alert('✅ Pedido(s) creado(s) correctamente');
       setGroupedOrders({});
       setShowOrderModal(false);
-      fetchData(searchTerm, currentPage);
+
     } catch (error) {
-      alert(`❌ Error al crear pedidos: ${error.response?.data?.message || error.message}`);
+      console.error('❌ ERROR FRONTEND:', error.response?.data || error.message);
+      alert(error.response?.data?.error || error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+
 
   // ========== MANEJADOR DE CAMBIOS EN BÚSQUEDA ==========
   const handleSearchChange = (e) => {
@@ -742,12 +782,51 @@ const ProductList = () => {
 
     setSearchTerm(value);
 
+    // =============================
+    // Mantener cursor
     setTimeout(() => {
       if (searchInputRef.current) {
         searchInputRef.current.selectionStart = cursorPosition;
         searchInputRef.current.selectionEnd = cursorPosition;
       }
     }, 0);
+
+    // =============================
+    // Normalizar y tokenizar
+    const normalizeText = (text) =>
+      (text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const tokenize = (text) => normalizeText(text).split(" ").filter(Boolean);
+
+    const searchTokens = tokenize(value);
+
+    // =============================
+    // Filtrar productos
+    const filtered = products.filter((product) => {
+      // Todos los tokens posibles del producto
+      const productTokens = [
+        ...tokenize(product.nombre_producto),
+        ...tokenize(product.codigo_original || ""),
+        ...tokenize(getProviderName(product.id_proveedor)),
+        ...(product.aliases || []).flatMap(tokenize)
+      ];
+
+      // Coincidencia parcial: cada token de búsqueda debe aparecer en al menos un token del producto
+      return searchTokens.every((token) =>
+        productTokens.some((pt) => pt.includes(token))
+      );
+    });
+
+    // Ordenar por precio más bajo
+    filtered.sort((a, b) => (a.precio || 0) - (b.precio || 0));
+
+    // Actualizar productos filtrados
+    setProducts(filtered);
   };
 
   // ========== FUNCIONES PARA MODALES ==========
@@ -871,7 +950,7 @@ const ProductList = () => {
             className="search-input"
           />
           <span className="total-products">
-            {totalProducts} productos encontrados
+            {totalProducts} Productos
           </span>
           <button className="btn-add" onClick={handleNewProduct}>
             Nuevo  ➕

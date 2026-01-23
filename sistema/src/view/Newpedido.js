@@ -72,38 +72,67 @@ const NewPedido = ({ onSave, onCancel }) => {
 
   // FUNCIÓN: Manejar envío del formulario
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // VALIDAR: Campos obligatorios
-    if (!fechaPedido || !idProveedor || detalles.length === 0) {
-      alert("Todos los campos son obligatorios, y el pedido debe tener al menos un detalle.");
+  if (!fechaPedido || !idProveedor || detalles.length === 0) {
+    alert("Todos los campos son obligatorios y el pedido debe tener al menos un detalle.");
+    return;
+  }
+
+  const pedidoData = {
+    fecha_pedido: fechaPedido,
+    id_proveedor: idProveedor,
+    detalles: detalles.map(d => ({
+      id_producto: d.id_producto,
+      cantidad: d.cantidad,
+      precio_unitario: d.precio_unitario
+    }))
+  };
+
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Sesión expirada. Inicie sesión nuevamente.");
+      navigate("/login");
       return;
     }
 
-    // PREPARAR: Datos para enviar al servidor
-    const pedidoData = { 
-      fecha_pedido: fechaPedido, 
-      id_proveedor: idProveedor, 
-      detalles: detalles.map(d => ({
-        id_producto: d.id_producto,
-        cantidad: d.cantidad,
-        precio_unitario: d.precio_unitario
-      }))
-    };
-
-    try {
-      // ENVIAR: Crear nuevo pedido en el servidor
-      await axios.post("http://localhost:5001/api/pedidos", pedidoData);
-      alert("Pedido creado con éxito!");
-      
-      // EJECUTAR: Callback de guardado y navegar
-      onSave && onSave();
-      navigate("/pedidos");
-    } catch (error) {
-      console.error("Error al crear el pedido:", error);
-      alert("Error al crear el pedido. Por favor, inténtalo de nuevo.");
+    if (id) {
+      // ACTUALIZAR PEDIDO
+      await axios.put(
+        `http://localhost:5001/api/pedidos/${id}`,
+        pedidoData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      alert("Pedido actualizado correctamente");
+    } else {
+      // CREAR PEDIDO
+      await axios.post(
+        "http://localhost:5001/api/pedidos",
+        pedidoData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      alert("Pedido creado correctamente");
     }
-  };
+
+    onSave && onSave();
+    navigate("/pedidos");
+
+  } catch (error) {
+    console.error("Error al guardar el pedido:", error.response?.data || error.message);
+    alert("No se pudo guardar el pedido. Verifique su sesión.");
+  }
+};
+
 
   // Estados de carga y error
   if (loading) return <p>Cargando...</p>;

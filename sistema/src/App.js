@@ -21,7 +21,7 @@ import './style/pedidos.css';
 import './style/proveedor.css';
 import './style/loading.css';
 import './style/editpedido.css';
-import './style/foter.css';
+import './style/foter.css';  // Asegúrate que este archivo existe o quítalo
 import './style/usuario.css';
 import './style/conf.css';
 
@@ -45,7 +45,7 @@ const App = () => {
       <div className="main-content">
         <Header />
         <div className="content-container">{children}</div>
-        <Footer company="Mi Sistema" version="1.0.0" />
+        <Footer /> {/* Sin props - el Footer maneja su propia data */}
       </div>
     </div>
   );

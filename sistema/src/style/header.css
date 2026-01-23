@@ -928,3 +928,38 @@
 .compact-visible {
   display: flex !important;
 }
+/* Estilos para los íconos de sol y luna manteniendo el diseño original */
+.time-sun-icon {
+  color: #f3f3f1; /* Dorado para el sol */
+  font-size: 1.2rem;
+}
+
+.time-moon-icon {
+  color: #fdfdff; /* Púrpura medio para la luna */
+  font-size: 1.2rem;
+}
+
+/* Si quieres animaciones sutiles (opcional) */
+.time-sun-icon {
+  animation: subtle-rotate 20s linear infinite;
+}
+
+.time-moon-icon {
+  animation: subtle-float 3s ease-in-out infinite;
+}
+
+@keyframes subtle-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes subtle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Asegurar que mantenga el mismo tamaño que el ícono de reloj original */
+.time-icon i,
+.time-icon svg {
+  font-size: 1.2rem !important;
+}

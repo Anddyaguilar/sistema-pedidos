@@ -44,14 +44,13 @@ app.use('/api/pedidos', pedidoRoute);
 app.use("/api/ocr", airoute); 
 app.use('/api', authRoutes);
 app.use('/api/usuarios', Usuario);
-app.use('/api/config',confg);
 app.use('/api/config', confg);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-/*
+
 app.use(express.static(path.join(__dirname, 'build')));
 app.get('*', (req, res) =>
   res.sendFile(path.join(__dirname, 'build', 'index.html'))
-);*/
+);
 
 // Función para iniciar el servidor con reintentos
 const startServer = async (port, attempts = 5) => {

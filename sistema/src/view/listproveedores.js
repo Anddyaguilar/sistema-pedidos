@@ -142,6 +142,7 @@ const ProveedoresList = () => {
               <tr>
                 <th>N° Proveedor</th>
                 <th>Nombre Proveedor</th>
+                <th>Teléfono</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -152,6 +153,7 @@ const ProveedoresList = () => {
                   <tr key={proveedor?.id_proveedor}>
                     <td>{proveedor?.id_proveedor}</td>
                     <td>{proveedor?.nombre_proveedor}</td>
+                    <td>{proveedor?.telefono}</td>
                     <td>
                       {/* Botón: Editar proveedor */}
                       <button

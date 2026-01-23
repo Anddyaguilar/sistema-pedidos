@@ -40,11 +40,12 @@ const login = async (req, res) => {
 
     // Crear el payload y firmar el token
     const payload = {
-      id: usuario.id,
+      id: usuario.id_users,
       nombre: usuario.nombre,
       correo: usuario.correo,
       rol: usuario.rol
     };
+     console.log('🧪 PAYLOAD JWT:', payload);
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 

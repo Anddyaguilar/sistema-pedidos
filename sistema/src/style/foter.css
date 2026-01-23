@@ -1,26 +1,131 @@
-.app-footer {
-  width: 100%;
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
-  padding: 12px 20px;
+/* ===== FOOTER SIN MÁRGENES ===== */
 
+/* Eliminar márgenes del body y html */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 103%;
+  overflow-x: hidden;
+  margin-left: -20px;
+  background-color: white !important;
+
+}
+
+/* Footer ABSOLUTO sin márgenes */
+footer.footer-normal {
+  /* ANCHO COMPLETO SIN MÁRGENES */
+  width: 150%;
+  min-width: 150%;
+  max-width: 150%;
+  
+ 
+  
+  /* POSICIONAMIENTO AL BORDE */
+  position:absolute;
+  left: 0;
+  right: 0;
+  
+  /* ELIMINAR TODOS LOS MÁRGENES Y PADDING */
+  margin: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  
+
+  
+  /* ALTURA */
+  height: 100;
+  
+  /* DISPLAY */
   display: flex;
-  justify-content: space-between;
   align-items: center;
-
-  font-size: 14px;
-  color: #4b5563;
-  font-family: "Inter", Arial, Helvetica, sans-serif;
+  justify-content: flex-start; /* Alineado a la izquierda */
+  
+  /* Z-INDEX */
+  z-index: 100;
 }
 
-.app-footer strong {
-  color: #111827;
+/* Contenedor SIN márgenes */
+footer.footer-normal .footer-container {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
 }
 
-.footer-right span {
-  background: #f3f4f6;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
+/* Contenido pegado a la izquierda SIN padding */
+footer.footer-normal .footer-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  height: 100%;
+  padding: 0 0 0 20px !important; /* Solo padding izquierdo */
+  margin: 0;
+}
+
+
+
+/* Texto del footer */
+footer.footer-normal .footer-text {
+  font-size: 15px;
+  color: #1a202c;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+}
+
+/* Nombre del sistema */
+footer.footer-normal .footer-text strong {
+  color: #1976d2;
+  font-weight: 700;
+  font-size: 16px;
+ 
+}
+
+/* Versión */
+footer.footer-normal .version-text {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 8px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  footer.footer-normal {
+    height: 60px;
+  }
+  
+  footer.footer-normal .footer-content {
+    padding: 0 0 0 15px !important;
+    justify-content: center; /* Centrar en móvil */
+  }
+  
+  footer.footer-normal .footer-text {
+    font-size: 13px;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  footer.footer-normal .version-text {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
 }

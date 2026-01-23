@@ -1,5 +1,6 @@
 /* ===== PÁGINA DE CARGA CON ESTILOS AZULES DEL LOGIN ===== */
 .loading-container {
+  width: 110%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -21,6 +22,8 @@
   bottom: 0;
   z-index: 9999;
   overflow: hidden;
+  margin-left: -50px;
+  
 }
 
 /* Efecto de partículas (igual que en tu login) */
@@ -116,6 +119,7 @@
   border: 3px solid rgba(255, 255, 255, 0.8);
   animation: logoPulse 2s ease-in-out infinite;
   object-fit: contain;
+    object-fit: cover;
 }
 
 .logo-glow {
@@ -365,6 +369,7 @@
   .loading-logo img {
     width: 100px;
     height: 100px;
+      object-fit: cover;
   }
   
   .logo-glow {
@@ -393,6 +398,7 @@
     width: 80px;
     height: 80px;
     padding: 10px;
+      object-fit: cover;
   }
   
   .logo-glow {

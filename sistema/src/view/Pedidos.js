@@ -8,12 +8,13 @@ export default function PedidosView() {
   // Estados del componente principal
   const [pedidos, setPedidos] = useState([]);
   const [proveedoresMap, setProveedoresMap] = useState({});
+  const [usuariosMap, setUsuariosMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState([]);
-  
+
   // Estados para la edición de pedidos
   const [editingPedido, setEditingPedido] = useState(null);
   const [detallesPedido, setDetallesPedido] = useState([]);
@@ -58,6 +59,7 @@ export default function PedidosView() {
           return acc;
         }, {});
         setProveedoresMap(proveedoresMap);
+
         setProveedoresList(data);
       } catch (error) {
         console.error("Error obteniendo proveedores:", error);
@@ -66,10 +68,40 @@ export default function PedidosView() {
     fetchProveedores();
   }, []);
 
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/api/usuarios/");
+        const data = await response.json();
+
+        // crear el mapa usando la propiedad correcta "id"
+        const map = data.reduce((acc, usuario) => {
+          acc[String(usuario.id)] = usuario.nombre;
+          return acc;
+        }, {});
+
+        setUsuariosMap(map); // actualizar el estado correctamente
+        console.log("Usuarios Map cargado:", map); // para depuración
+      } catch (error) {
+        console.error("Error obteniendo usuarios:", error);
+      }
+    };
+
+    fetchUsuarios();
+  }, []);
+
+
+
   // FUNCIÓN: Obtener nombre del proveedor por ID
   const getProviderName = (providerId) => {
     return proveedoresMap[providerId] || "Desconocido";
   };
+  //funcion para optener nombre de usuario 
+  const getUserName = (id) => {
+    return usuariosMap[String(id)] || "Desconocido";
+  };
+
+
 
   // FUNCIÓN: Cargar productos del proveedor seleccionado
   const cargarProductosDelProveedor = async (proveedorId) => {
@@ -79,7 +111,19 @@ export default function PedidosView() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5001/api/pedidos/productos/proveedor/${proveedorId}`);
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("No hay token disponible. Debes iniciar sesión.");
+
+      const res = await fetch(
+        `http://localhost:5001/api/pedidos/productos/proveedor/${proveedorId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
       if (!res.ok) {
         console.error("Error en la respuesta de la API:", res.status);
         alert("Error al cargar productos del proveedor");
@@ -107,41 +151,69 @@ export default function PedidosView() {
     }
   };
 
+
   // FUNCIÓN: Manejar edición de pedido
+
   const handleEdit = async (pedido) => {
     const { id_pedido } = pedido;
 
     try {
-      // Cargar detalles del pedido
-      const response = await fetch(`http://localhost:5001/api/pedidos/${id_pedido}/detalles`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Error al obtener los detalles del pedido: ${errorData.message || response.status}`);
-      }
-      const detalles = await response.json();
-      
-      // Cargar productos del proveedor
-      const productosCargados = await cargarProductosDelProveedor(pedido.id_proveedor);
-      
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No hay token disponible. Debes iniciar sesión.');
+
+      // 1️⃣ Cargar detalles del pedido
+      const detallesRes = await axios.get(
+        `http://localhost:5001/api/pedidos/${id_pedido}/detalles`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log("Detalles API:", detallesRes.data); // revisar estructura
+
+      // Obtener arrays según la respuesta de la API
+      const detallesArray = detallesRes.data.detalles || [];
+      const productosArray = detallesRes.data.productos || [];
+
+      // 2️⃣ Mapear detalles agregando el nombre desde productos
+      const detallesFormateados = detallesArray.map(d => {
+        const producto = productosArray.find(p => p.id_producto === d.id_producto);
+        return {
+          id_detalle: d.id_detalle || null,
+          id_producto: d.id_producto,
+          nombre_producto: producto ? producto.nombre_producto : 'Producto no disponible',
+          cantidad: d.cantidad || 1,
+          precio_unitario: d.precio_unitario || 0,
+        };
+      });
+
+      // 3️⃣ Cargar productos del proveedor
+      const productosRes = await axios.get(
+        `http://localhost:5001/api/pedidos/productos/proveedor/${pedido.id_proveedor}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const productosCargados = Array.isArray(productosRes.data)
+        ? productosRes.data
+        : productosRes.data.productos || [];
+
+      // 4️⃣ Actualizar estados
       setEditingPedido(pedido);
-      setDetallesPedido(detalles.map(d => ({
-        id_detalle: d.id_detalle,
-        id_producto: d.id_producto,
-        nombre_producto: d.nombre_producto,
-        cantidad: d.cantidad,
-        precio_unitario: d.precio_unitario,
-      })));
+      setDetallesPedido(detallesFormateados);
       setFechaPedidoEdit(pedido.fecha_pedido.split("T")[0]);
       setProveedorEdit(pedido.id_proveedor);
       setProductosEdit(productosCargados);
       setProductosFiltradosEdit(productosCargados);
       setDetallesEliminados([]);
       setShowEditModal(true);
+
+      console.log('✅ Pedido y productos cargados correctamente');
     } catch (error) {
-      console.error("Error al cargar detalles del pedido:", error);
-      alert("Hubo un problema al cargar los detalles del pedido.");
+      console.error("❌ Error al cargar detalles del pedido:", error);
+      alert("Hubo un problema al cargar los detalles del pedido. Revisa la consola.");
     }
   };
+
+
+
 
   // FUNCIÓN: Cerrar modal de edición
   const closeEditModal = () => {
@@ -156,23 +228,36 @@ export default function PedidosView() {
     if (!window.confirm("¿Está seguro de que desea eliminar este pedido?")) {
       return;
     }
-    
+
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("No hay sesión iniciada. Debes iniciar sesión primero.");
+        return;
+      }
+
       const response = await fetch(`http://localhost:5001/api/pedidos/${pedidoId}`, {
         method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
       });
 
       if (!response.ok) {
-        throw new Error("Error al eliminar el pedido");
+        const errorData = await response.json().catch(() => null);
+        const msg = errorData?.message || "Error al eliminar el pedido";
+        throw new Error(msg);
       }
 
       setPedidos(pedidos.filter((pedido) => pedido.id_pedido !== pedidoId));
       alert("Pedido eliminado correctamente");
     } catch (error) {
       console.error("Error al eliminar el pedido:", error);
-      alert("Hubo un problema al eliminar el pedido.");
+      alert(`Hubo un problema al eliminar el pedido: ${error.message}`);
     }
   };
+
 
   // FUNCIÓN: Mostrar formulario para nuevo pedido
   const handleAdd = () => {
@@ -180,22 +265,35 @@ export default function PedidosView() {
   };
 
   // FUNCIÓN: Descargar PDF de un pedido individual
-  const handleDescargarPDF = async (pedidoId) => {
+  const handleDescargarPDF = async (idPedido) => {
     try {
-      const response = await axios.get(`http://localhost:5001/api/pedidos/${pedidoId}/pdf`, {
-        responseType: "blob",
+      // Obtener token del localStorage o estado
+      const token = localStorage.getItem('token'); // o donde tengas tu JWT
+
+      if (!token) {
+        alert('No tienes sesión iniciada');
+        return;
+      }
+
+      const response = await axios.get(`http://localhost:5001/api/pedidos/${idPedido}/pdf`, {
+        responseType: 'blob', // importante para archivos
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
+      // Crear URL para descargar
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", `pedido_${pedidoId}.pdf`);
+      link.setAttribute('download', `pedido_${idPedido}.pdf`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.remove();
+
     } catch (error) {
-      console.error("Error al descargar el PDF:", error);
-      alert("Error al descargar el PDF. Por favor, inténtalo de nuevo.");
+      console.error('Error al descargar el PDF:', error);
+      alert('Error al descargar PDF');
     }
   };
 
@@ -248,41 +346,65 @@ export default function PedidosView() {
   };
 
   // FUNCIÓN: Actualizar pedido existente
-  const handleUpdate = async (pedidoActualizado) => {
+  const handleUpdate = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Su sesión ha expirado. Por favor inicie sesión de nuevo.");
+        navigate("/login");
+        return;
+      }
+
+      // Verificar que cada detalle tenga id_producto y cantidad válidos
+      const detallesValidos = detallesPedido.map(d => ({
+        id_detalle: d.id_detalle || null,
+        id_producto: d.id_producto,
+        cantidad: d.cantidad || 1
+      }));
+
+      console.log("Datos a enviar al backend:", {
+        estado: editingPedido.estado,
+        detalles: detallesValidos,
+        eliminados: detallesEliminados
+      });
+
       const response = await fetch(`http://localhost:5001/api/pedidos/${editingPedido.id_pedido}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          fecha_pedido: pedidoActualizado.fecha_pedido,
-          id_proveedor: pedidoActualizado.id_proveedor,
-          detalles: pedidoActualizado.detalles,
-          eliminados: pedidoActualizado.eliminados
+          estado: editingPedido.estado,
+          detalles: detallesValidos,
+          eliminados: detallesEliminados
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Error al actualizar el pedido");
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.error || "Error al actualizar el pedido";
+        throw new Error(errorMsg);
       }
 
-      const updatedPedidos = pedidos.map((pedido) =>
-        pedido.id_pedido === editingPedido.id_pedido ? { 
-          ...pedido, 
-          fecha_pedido: pedidoActualizado.fecha_pedido,
-          id_proveedor: pedidoActualizado.id_proveedor
-        } : pedido
+      // Refrescar estado local: solo actualiza estado y total
+      const updatedPedidos = pedidos.map(p =>
+        p.id_pedido === editingPedido.id_pedido
+          ? { ...p, estado: editingPedido.estado }
+          : p
       );
       setPedidos(updatedPedidos);
 
       closeEditModal();
-      alert("Pedido actualizado exitosamente");
+      alert("Pedido actualizado correctamente");
+
     } catch (error) {
       console.error("Error al actualizar el pedido:", error);
-      alert("Hubo un problema al actualizar el pedido.");
+      alert(`Hubo un problema al actualizar el pedido: ${error.message}`);
     }
   };
+
+
 
   // FUNCIÓN: Seleccionar/deseleccionar pedidos para descarga múltiple
   const togglePedidoSelection = (pedidoId) => {
@@ -301,7 +423,7 @@ export default function PedidosView() {
       alert("Por favor, seleccione un proveedor primero");
       return;
     }
-    
+
     if (productosEdit.length === 0) {
       const productosCargados = await cargarProductosDelProveedor(proveedorEdit);
       if (productosCargados.length === 0) {
@@ -311,7 +433,7 @@ export default function PedidosView() {
       setProductosEdit(productosCargados);
       setProductosFiltradosEdit(productosCargados);
     }
-    
+
     setSearchTermProduct("");
     setShowProductModal(true);
   };
@@ -370,15 +492,15 @@ export default function PedidosView() {
   // FUNCIÓN: Manejar cambios en los campos de detalle
   const handleDetalleChange = (index, field, value) => {
     const nuevos = [...detallesPedido];
-    
+
     // Validar cantidad mínima
     if (field === "cantidad" && value < 1) {
       alert("La cantidad mínima es 1");
       return;
     }
-    
+
     nuevos[index][field] = field === "cantidad" ? parseInt(value) || 1 : value;
-    
+
     // Si cambia el producto, actualizar nombre y precio automáticamente
     if (field === "id_producto") {
       const prod = productosEdit.find((p) => p.id_producto === parseInt(value));
@@ -400,7 +522,7 @@ export default function PedidosView() {
   const handleProveedorChange = async (e) => {
     const nuevoProveedor = e.target.value;
     setProveedorEdit(nuevoProveedor);
-    
+
     if (nuevoProveedor) {
       const productosCargados = await cargarProductosDelProveedor(nuevoProveedor);
       setProductosEdit(productosCargados);
@@ -414,25 +536,18 @@ export default function PedidosView() {
   // FUNCIÓN: Manejar envío del formulario de edición
   const handleSubmitEdit = (e) => {
     e.preventDefault();
-    
-    // Validaciones
-    if (!proveedorEdit) {
-      alert("Por favor, seleccione un proveedor");
-      return;
-    }
-    
+
     if (detallesPedido.length === 0) {
       alert("Debe agregar al menos un producto al pedido");
       return;
     }
-    
+
     handleUpdate({
-      fecha_pedido: fechaPedidoEdit,
-      id_proveedor: proveedorEdit,
       detalles: detallesPedido,
       eliminados: detallesEliminados,
     });
   };
+
 
   // FUNCIÓN: Filtrar pedidos según término de búsqueda
   const filteredPedidos = pedidos.filter((pedido) => {
@@ -464,10 +579,10 @@ export default function PedidosView() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-inputpd"
           />
-          
+
           <div className="toolbar-buttons">
-            
-            
+
+
             <button
               onClick={handleDescargarPDFsSeleccionados}
               className="btn-create-order"
@@ -476,10 +591,8 @@ export default function PedidosView() {
               Descargar PDF Seleccionados ({selectedPedido.length})
             </button>
           </div>
+
           
-          <span className="total-products">
-            {filteredPedidos.length} pedidos encontrados
-          </span>
         </div>
       </div>
 
@@ -497,6 +610,8 @@ export default function PedidosView() {
                 <tr>
                   <th style={{ width: '50px' }}>Seleccionar</th>
                   <th>N° de pedido</th>
+                  <th>Creado por</th>
+                  <th>estado</th>
                   <th>Fecha</th>
                   <th>Proveedor</th>
                   <th>Total</th>
@@ -515,6 +630,8 @@ export default function PedidosView() {
                       />
                     </td>
                     <td>{pedido.id_pedido}</td>
+                    <td>{getUserName(pedido.id_user)}</td>
+                    <td>{pedido.estado}</td>
                     <td>{new Date(pedido.fecha_pedido).toLocaleDateString('es-NI')}</td>
                     <td>{getProviderName(pedido.id_proveedor)}</td>
                     <td>${pedido.total}</td>
@@ -555,25 +672,36 @@ export default function PedidosView() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Editar Pedido #{editingPedido.id_pedido}</h3>
-            
+
             <form onSubmit={handleSubmitEdit} className="edit-formp">
               <div className="form-group">
                 <label>Número de Pedido</label>
-                <input 
-                  type="text" 
-                  value={editingPedido?.id_pedido || ''} 
-                  readOnly 
-                  className="inpute" 
+                <input
+                  type="text"
+                  value={editingPedido?.id_pedido || ''}
+                  readOnly
+                  className="inpute"
                 />
               </div>
 
               <div className="form-group">
+                <label>Creado por</label>
+                <input
+                  type="text"
+                  value={getUserName(editingPedido.id_user)}
+                  readOnly
+                  className="inpute"
+                />
+              </div>
+
+              <div className="form-group">
+
                 <label>Fecha del Pedido</label>
-                <input 
-                  type="date" 
-                  value={fechaPedidoEdit} 
-                  readOnly 
-                  className="inpute" 
+                <input
+                  type="date"
+                  value={fechaPedidoEdit}
+                  readOnly             // 🔹 bloqueado
+                  className="inpute"
                 />
               </div>
 
@@ -594,9 +722,29 @@ export default function PedidosView() {
                 </select>
               </div>
 
+              {/* ================= Estado editable con Radiobuttons ================= */}
+              <div className="form-group">
+                <label>Estado del Pedido *</label>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  {['Pendiente', 'Aprobado', 'Anulado'].map((estado) => (
+                    <label key={estado} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <input
+                        type="radio"
+                        name="estado"
+                        value={estado}
+                        checked={editingPedido.estado === estado}
+                        onChange={() =>
+                          setEditingPedido(prev => ({ ...prev, estado }))
+                        }
+                      />
+                      {estado}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="detalles">
                 <h3>Productos del Pedido</h3>
-                
                 {detallesPedido.length === 0 ? (
                   <p className="no-results">No hay productos en este pedido</p>
                 ) : (
@@ -660,7 +808,7 @@ export default function PedidosView() {
                                 className="btn-delete"
                                 style={{ padding: '0.25rem 0.5rem' }}
                               >
-                                🗑️ 
+                                🗑️
                               </button>
                             </td>
                           </tr>
@@ -703,12 +851,15 @@ export default function PedidosView() {
         </div>
       )}
 
+
+
+
       {/* Modal para seleccionar productos */}
       {showProductModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Seleccionar Producto</h3>
-            
+
             <div className="form-group">
               <input
                 type="text"

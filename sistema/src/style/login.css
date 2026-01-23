@@ -157,6 +157,7 @@
 .form-groupL {
   margin-bottom: 2rem;
   position: relative;
+  color: white;
 }
 
 .form-groupL label {
@@ -225,7 +226,7 @@
   background-repeat: no-repeat;
   opacity: 0.5;
   transition: all 0.3s ease;
-  
+  color: white;
 }
 
 .form-groupL:first-of-type::after {
@@ -548,6 +549,7 @@ button[type="submit"]:disabled::before {
   /* Ocultar iconos en móviles muy pequeños */
   .form-groupL::after {
     display: none;
+    color: white;
   }
 }
 

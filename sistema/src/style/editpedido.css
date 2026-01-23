@@ -224,6 +224,7 @@
   background: #e3f2fd;
   color: #007bff;
   border: 1px solid #bbdefb;
+  font-size: 20px;
 }
 
 .btn-edit:hover {
@@ -237,6 +238,8 @@
   background: #f8d7da;
   color: #dc3545;
   border: 1px solid #f5c6cb;
+  font-size: 22px;
+  
 }
 
 .btn-delete:hover {
