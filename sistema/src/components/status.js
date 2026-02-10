@@ -98,7 +98,7 @@ const Stats = () => {
         </div>
         <div className="header-info">
           <div>
-            <span>Última actualización</span>
+            <span>Última actualización  </span>
             <strong>{formatoFecha(stats.ultimaActualizacion)}</strong>
           </div>
           {logoUrl && <img src={logoUrl} alt="logo" className="logo" />}

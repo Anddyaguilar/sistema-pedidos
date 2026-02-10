@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../style/style.css";
+import "../style/pedidos.css";
 import NewPedidoForm from "./Newpedido";
 import axios from "axios";
 
@@ -14,6 +14,9 @@ export default function PedidosView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState([]);
+  
+  // Nuevo estado para la tasa de cambio
+  const [tasaCambio, setTasaCambio] = useState(36.6); // Valor por defecto
 
   // Estados para la edición de pedidos
   const [editingPedido, setEditingPedido] = useState(null);
@@ -29,6 +32,60 @@ export default function PedidosView() {
   const [detallesEliminados, setDetallesEliminados] = useState([]);
 
   const navigate = useNavigate();
+
+  // FUNCIÓN: Obtener tasa de cambio desde la configuración
+  useEffect(() => {
+    const fetchTasaCambio = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/api/config");
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.config?.exchange_rate) {
+            setTasaCambio(Number(data.config.exchange_rate));
+          }
+        }
+      } catch (error) {
+        console.warn("No se pudo cargar la tasa de cambio, usando valor por defecto:", error);
+        // Mantener el valor por defecto
+      }
+    };
+    fetchTasaCambio();
+  }, []);
+
+  // FUNCIÓN: Convertir precios entre monedas (SEGURA)
+  const convertirPrecios = (precio, moneda = "C$") => {
+    // Asegurarse de que precio sea un número
+    const p = Number(precio) || 0;
+    const tasa = Number(tasaCambio) || 36.6;
+    
+    if (moneda === "C$") {
+      return {
+        cordoba: p,
+        dolar: Number((p / tasa).toFixed(2))
+      };
+    } else {
+      return {
+        cordoba: Number((p * tasa).toFixed(2)),
+        dolar: p
+      };
+    }
+  };
+
+  // FUNCIÓN: Formatear moneda (SEGURA)
+  const formatCurrency = (amount, currency = "C$") => {
+    const numAmount = Number(amount) || 0;
+    return `${currency}${numAmount.toLocaleString("es-NI", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  };
+
+  // FUNCIÓN: Asegurar que un valor sea número
+  const asegurarNumero = (valor) => {
+    if (valor === null || valor === undefined) return 0;
+    const num = Number(valor);
+    return isNaN(num) ? 0 : num;
+  };
 
   // FUNCIÓN: Obtener lista de pedidos desde la API
   useEffect(() => {
@@ -59,7 +116,6 @@ export default function PedidosView() {
           return acc;
         }, {});
         setProveedoresMap(proveedoresMap);
-
         setProveedoresList(data);
       } catch (error) {
         console.error("Error obteniendo proveedores:", error);
@@ -68,6 +124,7 @@ export default function PedidosView() {
     fetchProveedores();
   }, []);
 
+  // FUNCIÓN: Obtener lista de usuarios y crear mapa
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -80,8 +137,7 @@ export default function PedidosView() {
           return acc;
         }, {});
 
-        setUsuariosMap(map); // actualizar el estado correctamente
-        console.log("Usuarios Map cargado:", map); // para depuración
+        setUsuariosMap(map);
       } catch (error) {
         console.error("Error obteniendo usuarios:", error);
       }
@@ -90,18 +146,15 @@ export default function PedidosView() {
     fetchUsuarios();
   }, []);
 
-
-
   // FUNCIÓN: Obtener nombre del proveedor por ID
   const getProviderName = (providerId) => {
     return proveedoresMap[providerId] || "Desconocido";
   };
-  //funcion para optener nombre de usuario 
+
+  // FUNCIÓN: Obtener nombre de usuario por ID
   const getUserName = (id) => {
     return usuariosMap[String(id)] || "Desconocido";
   };
-
-
 
   // FUNCIÓN: Cargar productos del proveedor seleccionado
   const cargarProductosDelProveedor = async (proveedorId) => {
@@ -131,7 +184,6 @@ export default function PedidosView() {
       }
 
       const data = await res.json();
-      console.log("✅ Respuesta de la API:", data);
 
       let productosCargados = [];
       if (Array.isArray(data)) {
@@ -151,9 +203,7 @@ export default function PedidosView() {
     }
   };
 
-
   // FUNCIÓN: Manejar edición de pedido
-
   const handleEdit = async (pedido) => {
     const { id_pedido } = pedido;
 
@@ -167,8 +217,6 @@ export default function PedidosView() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("Detalles API:", detallesRes.data); // revisar estructura
-
       // Obtener arrays según la respuesta de la API
       const detallesArray = detallesRes.data.detalles || [];
       const productosArray = detallesRes.data.productos || [];
@@ -180,8 +228,9 @@ export default function PedidosView() {
           id_detalle: d.id_detalle || null,
           id_producto: d.id_producto,
           nombre_producto: producto ? producto.nombre_producto : 'Producto no disponible',
-          cantidad: d.cantidad || 1,
-          precio_unitario: d.precio_unitario || 0,
+          cantidad: asegurarNumero(d.cantidad),
+          precio_unitario: asegurarNumero(d.precio_unitario),
+          moneda: producto?.tipo_moneda || "C$"
         };
       });
 
@@ -205,15 +254,11 @@ export default function PedidosView() {
       setDetallesEliminados([]);
       setShowEditModal(true);
 
-      console.log('✅ Pedido y productos cargados correctamente');
     } catch (error) {
       console.error("❌ Error al cargar detalles del pedido:", error);
       alert("Hubo un problema al cargar los detalles del pedido. Revisa la consola.");
     }
   };
-
-
-
 
   // FUNCIÓN: Cerrar modal de edición
   const closeEditModal = () => {
@@ -258,7 +303,6 @@ export default function PedidosView() {
     }
   };
 
-
   // FUNCIÓN: Mostrar formulario para nuevo pedido
   const handleAdd = () => {
     setShowNewForm(true);
@@ -267,22 +311,19 @@ export default function PedidosView() {
   // FUNCIÓN: Descargar PDF de un pedido individual
   const handleDescargarPDF = async (idPedido) => {
     try {
-      // Obtener token del localStorage o estado
-      const token = localStorage.getItem('token'); // o donde tengas tu JWT
-
+      const token = localStorage.getItem('token');
       if (!token) {
         alert('No tienes sesión iniciada');
         return;
       }
 
       const response = await axios.get(`http://localhost:5001/api/pedidos/${idPedido}/pdf`, {
-        responseType: 'blob', // importante para archivos
+        responseType: 'blob',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // Crear URL para descargar
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -359,14 +400,9 @@ export default function PedidosView() {
       const detallesValidos = detallesPedido.map(d => ({
         id_detalle: d.id_detalle || null,
         id_producto: d.id_producto,
-        cantidad: d.cantidad || 1
+        cantidad: asegurarNumero(d.cantidad),
+        precio_unitario: asegurarNumero(d.precio_unitario)
       }));
-
-      console.log("Datos a enviar al backend:", {
-        estado: editingPedido.estado,
-        detalles: detallesValidos,
-        eliminados: detallesEliminados
-      });
 
       const response = await fetch(`http://localhost:5001/api/pedidos/${editingPedido.id_pedido}`, {
         method: "PUT",
@@ -387,7 +423,6 @@ export default function PedidosView() {
         throw new Error(errorMsg);
       }
 
-      // Refrescar estado local: solo actualiza estado y total
       const updatedPedidos = pedidos.map(p =>
         p.id_pedido === editingPedido.id_pedido
           ? { ...p, estado: editingPedido.estado }
@@ -403,8 +438,6 @@ export default function PedidosView() {
       alert(`Hubo un problema al actualizar el pedido: ${error.message}`);
     }
   };
-
-
 
   // FUNCIÓN: Seleccionar/deseleccionar pedidos para descarga múltiple
   const togglePedidoSelection = (pedidoId) => {
@@ -452,7 +485,6 @@ export default function PedidosView() {
 
   // FUNCIÓN: Seleccionar producto del modal
   const selectProduct = (producto) => {
-    // Verificar si el producto ya está en los detalles
     const existe = detallesPedido.some(d => d.id_producto === producto.id_producto);
     if (existe) {
       alert("Este producto ya está en el pedido. Puede modificar la cantidad.");
@@ -465,7 +497,8 @@ export default function PedidosView() {
         id_producto: producto.id_producto,
         nombre_producto: producto.nombre_producto,
         cantidad: 1,
-        precio_unitario: producto.precio,
+        precio_unitario: asegurarNumero(producto.precio),
+        moneda: producto.tipo_moneda || "C$"
       },
     ]);
     setShowProductModal(false);
@@ -475,17 +508,14 @@ export default function PedidosView() {
   const eliminarDetalle = async (index) => {
     const detalle = detallesPedido[index];
 
-    // Confirmar eliminación
     if (!window.confirm("¿Está seguro de que desea eliminar este producto del pedido?")) {
       return;
     }
 
-    // Si el detalle tiene id_detalle, lo agregamos a la lista de eliminados
     if (detalle.id_detalle) {
       setDetallesEliminados(prev => [...prev, detalle.id_detalle]);
     }
 
-    // Eliminar del estado (frontend)
     setDetallesPedido((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -493,7 +523,6 @@ export default function PedidosView() {
   const handleDetalleChange = (index, field, value) => {
     const nuevos = [...detallesPedido];
 
-    // Validar cantidad mínima
     if (field === "cantidad" && value < 1) {
       alert("La cantidad mínima es 1");
       return;
@@ -501,21 +530,32 @@ export default function PedidosView() {
 
     nuevos[index][field] = field === "cantidad" ? parseInt(value) || 1 : value;
 
-    // Si cambia el producto, actualizar nombre y precio automáticamente
     if (field === "id_producto") {
       const prod = productosEdit.find((p) => p.id_producto === parseInt(value));
       nuevos[index].nombre_producto = prod ? prod.nombre_producto : "";
-      nuevos[index].precio_unitario = prod ? prod.precio : 0;
+      nuevos[index].precio_unitario = prod ? asegurarNumero(prod.precio) : 0;
+      nuevos[index].moneda = prod ? prod.tipo_moneda || "C$" : "C$";
     }
 
     setDetallesPedido(nuevos);
   };
 
-  // FUNCIÓN: Calcular total del pedido en edición
+  // FUNCIÓN: Calcular total del pedido en edición (CORREGIDA)
   const calcularTotal = () => {
-    return detallesPedido.reduce((total, detalle) => {
-      return total + (detalle.cantidad * detalle.precio_unitario);
-    }, 0).toFixed(2);
+    const total = detallesPedido.reduce((total, detalle) => {
+      const precioUnitario = asegurarNumero(detalle.precio_unitario);
+      const cantidad = asegurarNumero(detalle.cantidad);
+      const tasa = asegurarNumero(tasaCambio);
+      
+      let precioCordobas = precioUnitario;
+      if (detalle.moneda === "$") {
+        precioCordobas = precioUnitario * tasa;
+      }
+      
+      return total + (cantidad * precioCordobas);
+    }, 0);
+    
+    return total.toFixed(2);
   };
 
   // FUNCIÓN: Manejar cambio de proveedor en edición
@@ -547,7 +587,6 @@ export default function PedidosView() {
       eliminados: detallesEliminados,
     });
   };
-
 
   // FUNCIÓN: Filtrar pedidos según término de búsqueda
   const filteredPedidos = pedidos.filter((pedido) => {
@@ -581,8 +620,6 @@ export default function PedidosView() {
           />
 
           <div className="toolbar-buttons">
-
-
             <button
               onClick={handleDescargarPDFsSeleccionados}
               className="btn-create-order"
@@ -590,15 +627,23 @@ export default function PedidosView() {
             >
               Descargar PDF Seleccionados ({selectedPedido.length})
             </button>
-          </div>
-
-          
+           </div>
+        </div>
+        
+        {/* Info de tasa de cambio */}
+        <div className="tasa-info" style={{
+          fontSize: '15px',
+          color: '#666',
+          marginTop: '5px',
+          fontStyle: 'italic'
+        }}>
+          Tasa de cambio: 1$ = C${tasaCambio.toFixed(2)}
         </div>
       </div>
 
       {/* Renderizado condicional: formulario nuevo o tabla de pedidos */}
       {showNewForm ? (
-        <NewPedidoForm onSave={handleSave} onCancel={handleCancel} />
+        <NewPedidoForm onSave={handleSave} onCancel={handleCancel} tasaCambio={tasaCambio} />
       ) : (
         // Tabla de pedidos
         <div className="table-responsive">
@@ -611,56 +656,74 @@ export default function PedidosView() {
                   <th style={{ width: '50px' }}>Seleccionar</th>
                   <th>N° de pedido</th>
                   <th>Creado por</th>
-                  <th>estado</th>
+                  <th style={{ width: '120px' }}>Estado</th>
                   <th>Fecha</th>
                   <th>Proveedor</th>
-                  <th>Total</th>
+                  <th>Total C$</th>
+                  <th>Total $</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPedidos.map((pedido) => (
-                  <tr key={pedido.id_pedido}>
-                    <td>
-                      <input
-                        className="select-checkbox"
-                        type="checkbox"
-                        checked={selectedPedido.includes(pedido.id_pedido)}
-                        onChange={() => togglePedidoSelection(pedido.id_pedido)}
-                      />
-                    </td>
-                    <td>{pedido.id_pedido}</td>
-                    <td>{getUserName(pedido.id_user)}</td>
-                    <td>{pedido.estado}</td>
-                    <td>{new Date(pedido.fecha_pedido).toLocaleDateString('es-NI')}</td>
-                    <td>{getProviderName(pedido.id_proveedor)}</td>
-                    <td>${pedido.total}</td>
-                    <td>
-                      <button
-                        onClick={() => handleEdit(pedido)}
-                        className="btn-edit"
-                        title="Editar pedido"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pedido.id_pedido)}
-                        className="btn-delete"
-                        title="Eliminar pedido"
-                      >
-                        🗑️
-                      </button>
-                      <button
-                        onClick={() => handleDescargarPDF(pedido.id_pedido)}
-                        className="btn-create-order"
-                        title="Descargar PDF"
-                        style={{ marginLeft: '5px', padding: '0.4rem 0.75rem' }}
-                      >
-                        PDF
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredPedidos.map((pedido) => {
+                  // Calcular total en dólares (con manejo de errores)
+                  const totalPedido = asegurarNumero(pedido.total);
+                  const tasa = asegurarNumero(tasaCambio);
+                  const totalDolares = tasa > 0 ? (totalPedido / tasa).toFixed(2) : "0.00";
+                  
+                  return (
+                    <tr key={pedido.id_pedido}>
+                      <td>
+                        <input
+                          className="select-checkbox"
+                          type="checkbox"
+                          checked={selectedPedido.includes(pedido.id_pedido)}
+                          onChange={() => togglePedidoSelection(pedido.id_pedido)}
+                        />
+                      </td>
+                      <td>{pedido.id_pedido}</td>
+                      <td>{getUserName(pedido.id_user)}</td>
+                      <td>
+                        <div className="td-estado">
+                          <div 
+                            className={`estado-bola estado-con-tooltip ${pedido.estado?.toLowerCase() || 'default'}`}
+                            data-tooltip={`Estado: ${pedido.estado}`}
+                          >
+                            {pedido.estado}
+                          </div>
+                        </div>
+                      </td>
+                      <td>{new Date(pedido.fecha_pedido).toLocaleDateString('es-NI')}</td>
+                      <td>{getProviderName(pedido.id_proveedor)}</td>
+                      <td style={{ fontWeight: 'bold' }}>{formatCurrency(pedido.total, "C$")}</td>
+                      <td style={{ color: '#28a745', fontWeight: 'bold' }}>{formatCurrency(totalDolares, "$")}</td>
+                      <td>
+                        <button
+                          onClick={() => handleEdit(pedido)}
+                          className="btn-edit"
+                          title="Editar pedido"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDelete(pedido.id_pedido)}
+                          className="btn-delete"
+                          title="Eliminar pedido"
+                        >
+                          🗑️
+                        </button>
+                        <button
+                          onClick={() => handleDescargarPDF(pedido.id_pedido)}
+                          className="btn-create-order"
+                          title="Descargar PDF"
+                          style={{ marginLeft: '5px', padding: '0.4rem 0.75rem' }}
+                        >
+                          PDF
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -672,6 +735,20 @@ export default function PedidosView() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Editar Pedido #{editingPedido.id_pedido}</h3>
+            
+            {/* Info de tasa de cambio en el modal */}
+            <div className="tasa-info-modal" style={{
+              fontSize: '15px',
+              color: '#666',
+              marginBottom: '15px',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              backgroundColor: '#f8f9fa',
+              padding: '5px',
+              borderRadius: '4px'
+            }}>
+              Tasa de cambio actual: 1$ = C${tasaCambio.toFixed(2)}
+            </div>
 
             <form onSubmit={handleSubmitEdit} className="edit-formp">
               <div className="form-group">
@@ -695,12 +772,11 @@ export default function PedidosView() {
               </div>
 
               <div className="form-group">
-
                 <label>Fecha del Pedido</label>
                 <input
                   type="date"
                   value={fechaPedidoEdit}
-                  readOnly             // 🔹 bloqueado
+                  readOnly
                   className="inpute"
                 />
               </div>
@@ -722,14 +798,15 @@ export default function PedidosView() {
                 </select>
               </div>
 
-              {/* ================= Estado editable con Radiobuttons ================= */}
+              {/* Estado editable */}
               <div className="form-group">
                 <label>Estado del Pedido *</label>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <div className="estado-radio-group">
                   {['Pendiente', 'Aprobado', 'Anulado'].map((estado) => (
-                    <label key={estado} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <div key={estado} className="estado-radio-option">
                       <input
                         type="radio"
+                        id={`estado-${estado}`}
                         name="estado"
                         value={estado}
                         checked={editingPedido.estado === estado}
@@ -737,8 +814,13 @@ export default function PedidosView() {
                           setEditingPedido(prev => ({ ...prev, estado }))
                         }
                       />
-                      {estado}
-                    </label>
+                      <label 
+                        htmlFor={`estado-${estado}`} 
+                        className={`estado-radio-label estado-${estado.toLowerCase()}`}
+                      >
+                        {estado}
+                      </label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -755,72 +837,115 @@ export default function PedidosView() {
                           <th>Producto</th>
                           <th>Cantidad</th>
                           <th>Precio Unitario</th>
-                          <th>Subtotal</th>
+                          <th>Moneda</th>
+                          <th>Precio C$</th>
+                          <th>Subtotal C$</th>
                           <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {detallesPedido.map((d, index) => (
-                          <tr key={index}>
-                            <td>
-                              <input
-                                type="text"
-                                value={d.nombre_producto}
-                                readOnly
-                                className="inpute"
-                                style={{ width: '100%' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="1"
-                                value={d.cantidad}
-                                onChange={(e) =>
-                                  handleDetalleChange(index, "cantidad", parseInt(e.target.value))
-                                }
-                                className="inpute"
-                                style={{ width: '80px' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={`$${d.precio_unitario}`}
-                                readOnly
-                                className="inpute"
-                                style={{ width: '100px' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={`$${(d.cantidad * d.precio_unitario).toFixed(2)}`}
-                                readOnly
-                                className="inpute"
-                                style={{ width: '100px', fontWeight: 'bold' }}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => eliminarDetalle(index)}
-                                className="btn-delete"
-                                style={{ padding: '0.25rem 0.5rem' }}
-                              >
-                                🗑️
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {detallesPedido.map((d, index) => {
+                          // Calcular precio en córdobas (con manejo seguro)
+                          const precioUnitario = asegurarNumero(d.precio_unitario);
+                          const cantidad = asegurarNumero(d.cantidad);
+                          const tasa = asegurarNumero(tasaCambio);
+                          const moneda = d.moneda || "C$";
+                          
+                          let precioCordobas = precioUnitario;
+                          if (moneda === "$") {
+                            precioCordobas = precioUnitario * tasa;
+                          }
+                          
+                          const precioCordobasNum = Number(precioCordobas) || 0;
+                          const subtotalCordobas = cantidad * precioCordobasNum;
+                          
+                          return (
+                            <tr key={index}>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={d.nombre_producto}
+                                  readOnly
+                                  className="inpute"
+                                  style={{ width: '100%' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={d.cantidad}
+                                  onChange={(e) =>
+                                    handleDetalleChange(index, "cantidad", parseInt(e.target.value))
+                                  }
+                                  className="inpute"
+                                  style={{ width: '80px' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={`${moneda}${precioUnitario.toFixed(2)}`}
+                                  readOnly
+                                  className="inpute"
+                                  style={{ width: '100px' }}
+                                />
+                              </td>
+                              <td>
+                                <span style={{
+                                  fontWeight: 'bold',
+                                  color: moneda === 'C$' ? '#28a745' : '#007bff'
+                                }}>
+                                  {moneda}
+                                </span>
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={`C$${precioCordobasNum.toFixed(2)}`}
+                                  readOnly
+                                  className="inpute"
+                                  style={{ width: '100px', fontWeight: 'bold' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={`C$${subtotalCordobas.toFixed(2)}`}
+                                  readOnly
+                                  className="inpute"
+                                  style={{ width: '100px', fontWeight: 'bold', color: '#28a745' }}
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarDetalle(index)}
+                                  className="btn-delete"
+                                  style={{ padding: '0.25rem 0.5rem' }}
+                                >
+                                  🗑️
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colSpan="3" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                            Total del Pedido:
+                          <td colSpan="5" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                            Total del Pedido (C$):
                           </td>
-                          <td colSpan="2" style={{ fontWeight: 'bold', color: '#28a745' }}>
-                            ${calcularTotal()}
+                          <td colSpan="2" style={{ fontWeight: 'bold', color: '#28a745', fontSize: '1.1em' }}>
+                            C${calcularTotal()}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                            Total del Pedido ($):
+                          </td>
+                          <td colSpan="2" style={{ fontWeight: 'bold', color: '#007bff', fontSize: '1.1em' }}>
+                            ${(asegurarNumero(calcularTotal()) / asegurarNumero(tasaCambio)).toFixed(2)}
                           </td>
                         </tr>
                       </tfoot>
@@ -851,9 +976,6 @@ export default function PedidosView() {
         </div>
       )}
 
-
-
-
       {/* Modal para seleccionar productos */}
       {showProductModal && (
         <div className="modal-overlay">
@@ -878,34 +1000,62 @@ export default function PedidosView() {
                     <th>Nombre</th>
                     <th>Código</th>
                     <th>Precio</th>
+                    <th>Moneda</th>
+                    <th>Precio C$</th>
                     <th>Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {productosFiltradosEdit.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="no-results">
+                      <td colSpan="6" className="no-results">
                         No se encontraron productos
                       </td>
                     </tr>
                   ) : (
-                    productosFiltradosEdit.map((producto) => (
-                      <tr key={producto.id_producto}>
-                        <td>{producto.nombre_producto}</td>
-                        <td>{producto.codigo_original || 'N/A'}</td>
-                        <td>${Number(producto.precio).toFixed(2)}</td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => selectProduct(producto)}
-                            className="btn-edit"
-                            style={{ padding: '0.25rem 0.5rem' }}
-                          >
-                            Seleccionar
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    productosFiltradosEdit.map((producto) => {
+                      const precio = asegurarNumero(producto.precio);
+                      const moneda = producto.tipo_moneda || "C$";
+                      const tasa = asegurarNumero(tasaCambio);
+                      
+                      let precioCordobas = precio;
+                      if (moneda === "$") {
+                        precioCordobas = precio * tasa;
+                      }
+                      
+                      return (
+                        <tr key={producto.id_producto}>
+                          <td>{producto.nombre_producto}</td>
+                          <td>{producto.codigo_original || 'N/A'}</td>
+                          <td>
+                            {moneda}{precio.toFixed(2)}
+                          </td>
+                          <td>
+                            <span style={{
+                              fontWeight: 'bold',
+                              color: moneda === 'C$' ? '#28a745' : '#007bff'
+                            }}>
+                              {moneda}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 'bold', color: '#28a745' }}>
+                              C${precioCordobas.toFixed(2)}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => selectProduct(producto)}
+                              className="btn-edit"
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '1.8rem' }}
+                            >
+                              +
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

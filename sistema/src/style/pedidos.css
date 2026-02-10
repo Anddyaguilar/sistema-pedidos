@@ -1,0 +1,345 @@
+/* ============================================================================
+   ESTADO EN BOLA/CÍRCULO - CON PALABRA COMPLETA
+   ============================================================================ */
+
+.td-estado {
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 8px 4px !important;
+}
+
+.estado-bola {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 85px;
+  height: 30px;
+  border-radius: 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
+  padding: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+  user-select: none;
+  border: 2px solid transparent;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Efecto de brillo sutil */
+.estado-bola::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.7s ease;
+}
+
+.estado-bola:hover::before {
+  left: 100%;
+}
+
+/* APROBADO - Verde vibrante */
+.estado-bola.aprobado {
+  background: radial-gradient(circle at 30% 30%, #22c55e, #16a34a);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 3px 12px rgba(34, 197, 94, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.estado-bola.aprobado:hover {
+  transform: scale(1.08);
+  box-shadow: 0 5px 18px rgba(34, 197, 94, 0.5),
+    0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+}
+
+/* PENDIENTE - Naranja energético */
+.estado-bola.pendiente {
+  background-color: #eeb50bde;
+  color: #f5f1f0;
+
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 3px 12px rgba(251, 191, 36, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.estado-bola.pendiente:hover {
+  transform: scale(1.08);
+  box-shadow: 0 5px 18px rgba(255, 251, 0, 0.842),
+    0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+  animation: temblor-pendiente 0.5s ease;
+}
+
+@keyframes temblor-pendiente {
+
+  0%,
+  100% {
+    transform: scale(1.08) rotate(0deg);
+  }
+
+  25% {
+    transform: scale(1.08) rotate(2deg);
+  }
+
+  75% {
+    transform: scale(1.08) rotate(-2deg);
+  }
+}
+
+/* ANULADO - Rojo intenso */
+.estado-bola.anulado {
+  background: radial-gradient(circle at 30% 30%, #f87171, #ef4444);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 3px 12px rgba(248, 113, 113, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.estado-bola.anulado:hover {
+  transform: scale(1.08);
+  box-shadow: 0 5px 18px rgba(248, 113, 113, 0.5),
+    0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+}
+
+/* CANCELADO - Rojo oscuro */
+.estado-bola.cancelado {
+  background: radial-gradient(circle at 30% 30%, #dc2626, #b91c1c);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 3px 12px rgba(220, 38, 38, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.estado-bola.cancelado:hover {
+  transform: scale(1.08);
+  box-shadow: 0 5px 18px rgba(220, 38, 38, 0.5),
+    0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+}
+
+/* Estado por defecto */
+.estado-bola.default {
+  background: radial-gradient(circle at 30% 30%, #94a3b8, #64748b);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 3px 12px rgba(148, 163, 184, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* ============================================================================
+   TOOLTIP PARA ESTADOS
+   ============================================================================ */
+
+.estado-con-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.estado-con-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.estado-con-tooltip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: #1f2937 transparent transparent transparent;
+  margin-bottom: 4px;
+}
+
+/* ============================================================================
+   RADIO BUTTONS MEJORADOS PARA ESTADO EN MODAL
+   ============================================================================ */
+
+.estado-radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.estado-radio-option {
+  flex: 1;
+  min-width: 120px;
+}
+
+.estado-radio-option input[type="radio"] {
+  display: none;
+}
+
+.estado-radio-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  background: #f8f9fa;
+  color: #495057;
+  text-align: center;
+  min-height: 50px;
+}
+
+.estado-radio-label:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.estado-radio-option input[type="radio"]:checked+.estado-radio-label {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 700;
+}
+
+/* Colores específicos para radio buttons */
+.estado-radio-label.estado-aprobado {
+  background: rgba(34, 197, 94, 0.1);
+  color: #166534;
+  border-color: #22c55e;
+}
+
+.estado-radio-option input[type="radio"]:checked+.estado-radio-label.estado-aprobado {
+  background: #22c55e;
+  color: white;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.estado-radio-label.estado-pendiente {
+  background: rgba(251, 191, 36, 0.1);
+  color: #ebe6e3;
+  border-color: #fbbf24;
+}
+
+.estado-radio-option input[type="radio"]:checked+.estado-radio-label.estado-pendiente {
+  background: #fbbf24;
+  color: #fffefd;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.estado-radio-label.estado-anulado {
+  background: rgba(248, 113, 113, 0.1);
+  color: #991b1b;
+  border-color: #f87171;
+}
+
+.estado-radio-option input[type="radio"]:checked+.estado-radio-label.estado-anulado {
+  background: #f87171;
+  color: white;
+  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.3);
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+  .estado-bola {
+    width: 85px;
+    height: 27px;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .estado-bola {
+    width: 65px;
+    height: 26px;
+    font-size: 0.6rem;
+    padding: 6px;
+  }
+
+  .estado-radio-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .estado-radio-option {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .estado-bola {
+    width: 60px;
+    height: 50px;
+    font-size: 0.55rem;
+    padding: 4px;
+  }
+}
+
+/* ============================================================================
+   ANIMACIÓN DE ENTRADA
+   ============================================================================ */
+
+@keyframes entrada-estado {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.estado-bola {
+  animation: entrada-estado 0.3s ease-out;
+}
+
+/* ============================================================================
+   ESTILOS PARA EL TEXTO DENTRO DEL CÍRCULO
+   ============================================================================ */
+
+.estado-bola span {
+  display: block;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Ajustes específicos para cada estado */
+.estado-bola.aprobado span,
+.estado-bola.pendiente span,
+.estado-bola.anulado span,
+.estado-bola.cancelado span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+}

@@ -37,7 +37,7 @@ const obtenerProductos = async (req, res) => {
   }
 };
 
-// Crear producto
+// Crear producto - Evita duplicados por código y proveedor
 const crearProducto = async (req, res) => {
   const { nombre_producto, id_proveedor, precio, codigo_original } = req.body;
 
@@ -46,28 +46,115 @@ const crearProducto = async (req, res) => {
   }
 
   try {
+    // Primero, verificar si ya existe un producto con el mismo código Y el mismo proveedor
+    const [productosExistentes] = await db.query(
+      `SELECT id_producto FROM productos 
+       WHERE codigo_original = ? AND id_proveedor = ?`,
+      [codigo_original, id_proveedor]
+    );
+
+    if (productosExistentes.length > 0) {
+      // Si ya existe con el mismo código y mismo proveedor: SOLO ACTUALIZAR PRECIO
+      const productoId = productosExistentes[0].id_producto;
+      
+      await db.query(
+        `UPDATE productos SET precio = ? WHERE id_producto = ?`,
+        [precio, productoId]
+      );
+      
+      return res.json({ 
+        id: productoId, 
+        message: 'Producto actualizado (precio modificado)',
+        accion: 'actualizado',
+        detalle: 'Ya existía un producto con el mismo código y proveedor'
+      });
+    }
+
+    // Si NO existe el mismo código con el mismo proveedor, crear NUEVO producto
     const [result] = await db.query(
-      'INSERT INTO productos (nombre_producto, id_proveedor, precio, codigo_original) VALUES (?, ?, ?, ?)',
+      `INSERT INTO productos (nombre_producto, id_proveedor, precio, codigo_original) 
+       VALUES (?, ?, ?, ?)`,
       [nombre_producto, id_proveedor, precio, codigo_original]
     );
-    res.json({ id: result.insertId, message: 'Producto creado' });
+    
+    res.json({ 
+      id: result.insertId, 
+      message: 'Producto creado exitosamente',
+      accion: 'creado'
+    });
+    
   } catch (error) {
     console.error('Error en crearProducto:', error);
+    
+    // Manejar posibles errores de duplicados en la base de datos
+    if (error.code === 'ER_DUP_ENTRY') {
+      // Si hay un error de duplicado en la BD, intentar actualizar
+      try {
+        const [existentes] = await db.query(
+          `SELECT id_producto FROM productos 
+           WHERE codigo_original = ? AND id_proveedor = ?`,
+          [codigo_original, id_proveedor]
+        );
+        
+        if (existentes.length > 0) {
+          await db.query(
+            `UPDATE productos SET precio = ? WHERE id_producto = ?`,
+            [precio, existentes[0].id_producto]
+          );
+          
+          return res.json({ 
+            id: existentes[0].id_producto, 
+            message: 'Producto actualizado (precio modificado)',
+            accion: 'actualizado',
+            detalle: 'Duplicado detectado por la base de datos'
+          });
+        }
+      } catch (innerError) {
+        console.error('Error al manejar duplicado:', innerError);
+      }
+    }
+    
     res.status(500).json({ error: 'Error en el servidor' });
   }
 };
 
-// Actualizar producto
+// Actualizar producto (para uso manual, no desde la creación)
 const actualizarProducto = async (req, res) => {
   const { id_producto } = req.params;
   const { nombre_producto, id_proveedor, precio, codigo_original } = req.body;
 
   try {
+    // Verificar que no se cree un duplicado al actualizar
+    if (codigo_original && id_proveedor) {
+      const [duplicados] = await db.query(
+        `SELECT id_producto FROM productos 
+         WHERE codigo_original = ? 
+         AND id_proveedor = ? 
+         AND id_producto != ?`,
+        [codigo_original, id_proveedor, id_producto]
+      );
+      
+      if (duplicados.length > 0) {
+        return res.status(400).json({ 
+          error: 'Ya existe otro producto con el mismo código y proveedor' 
+        });
+      }
+    }
+
     await db.query(
-      'UPDATE productos SET nombre_producto = ?, id_proveedor = ?, precio = ?, codigo_original = ? WHERE id_producto = ?',
+      `UPDATE productos SET 
+        nombre_producto = ?, 
+        id_proveedor = ?, 
+        precio = ?, 
+        codigo_original = ? 
+       WHERE id_producto = ?`,
       [nombre_producto, id_proveedor, precio, codigo_original, id_producto]
     );
-    res.json({ message: 'Producto actualizado' });
+    
+    res.json({ 
+      message: 'Producto actualizado',
+      accion: 'actualizado'
+    });
   } catch (error) {
     console.error('Error en actualizarProducto:', error);
     res.status(500).json({ error: 'Error en el servidor' });
@@ -80,7 +167,10 @@ const eliminarProducto = async (req, res) => {
 
   try {
     await db.query('DELETE FROM productos WHERE id_producto = ?', [id_producto]);
-    res.json({ message: 'Producto eliminado' });
+    res.json({ 
+      message: 'Producto eliminado',
+      accion: 'eliminado'
+    });
   } catch (error) {
     console.error('Error en eliminarProducto:', error);
     res.status(500).json({ error: 'Error en el servidor' });

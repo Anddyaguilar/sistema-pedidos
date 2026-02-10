@@ -87,7 +87,7 @@ const Header = () => {
   const isActive = (path) => location.pathname === path;
 
   const menuItems = [
-    { path: "/status", icon: FaHome, label: "Dashboard", badge: null },
+    { path: "/status", icon: FaHome, label: "Inicio", badge: null },
     { path: "/pedidos", icon: FaShoppingCart, label: "Pedidos", badge: null },
     { path: "/productos", icon: FaBox, label: "Productos", badge: null },
     { path: "/proveedores", icon: FaTruck, label: "Proveedores", badge: null },
@@ -263,7 +263,7 @@ const Header = () => {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <FaCog />
-                    <span>Mi Perfil</span>
+                    <span>Configuración de sistema</span>
                   </Link>
                 </div>
               </div>

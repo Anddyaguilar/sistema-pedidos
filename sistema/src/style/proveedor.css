@@ -83,9 +83,9 @@
 }
 
 .btn-edit {
-  background: #e3f2fd;
+  background: white;
   color: #007bff;
-  border: 1px solid #bbdefb;
+
   padding: 0.5rem 1rem;
   margin-right: 0.5rem;
   font-size: 0.8rem;
@@ -97,9 +97,9 @@
 }
 
 .btn-delete {
-  background: #f8d7da;
+  background: white;
   color: #dc3545;
-  border: 1px solid #f5c6cb;
+  
   padding: 0.5rem 1rem;
   margin-right: 0.5rem;
   font-size: 0.8rem;
@@ -114,6 +114,7 @@
   background: #28a745;
   color: white;
   margin-right: 0.5rem;
+  max-width: 350px;
 }
 
 .btn-save:hover {
@@ -286,7 +287,7 @@
   background: white;
   border-radius: 4px;
   padding: 1.5rem;
-  max-width: 600px;
+  max-width: 1200px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;

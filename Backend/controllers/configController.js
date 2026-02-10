@@ -38,7 +38,17 @@ async function updateConfig(req, res) {
       if (fs.existsSync(oldLogoPath)) fs.unlinkSync(oldLogoPath);
     }
 
-    // Actualización simple, ignorando campos vacíos
+    // Validación tasa de cambio (si viene)
+    let exchangeRate = current.exchange_rate;
+    if (req.body.exchange_rate !== undefined) {
+      const rate = parseFloat(req.body.exchange_rate);
+      if (isNaN(rate) || rate <= 0) {
+        return res.status(400).json({ ok: false, error: 'Tasa de cambio inválida' });
+      }
+      exchangeRate = rate;
+    }
+
+    // Actualización general
     const sql = `
       UPDATE system_config SET
         company_name = ?,
@@ -47,6 +57,7 @@ async function updateConfig(req, res) {
         phone = ?,
         email = ?,
         currency = ?,
+        exchange_rate = ?,
         logo_path = ?
       WHERE id = ?
     `;
@@ -58,6 +69,7 @@ async function updateConfig(req, res) {
       req.body.phone?.trim() || current.phone,
       req.body.email?.trim() || current.email,
       req.body.currency?.trim() || current.currency,
+      exchangeRate,
       logoPath,
       current.id
     ];
@@ -65,6 +77,7 @@ async function updateConfig(req, res) {
     await pool.query(sql, values);
 
     res.json({ ok: true, message: 'Configuración actualizada correctamente' });
+
   } catch (err) {
     console.error('Error updateConfig:', err);
     res.status(500).json({ ok: false, error: 'Error al actualizar configuración' });

@@ -7,7 +7,8 @@ export default function ConfigView() {
     address: '',
     phone: '',
     email: '',
-    currency: ''
+    currency: '',
+    exchange_rate: ''
   });
 
   const [logo, setLogo] = useState(null);
@@ -20,7 +21,7 @@ export default function ConfigView() {
     loadConfig();
   }, []);
 
-  // Cargar configuración desde backend
+  // Cargar configuración
   async function loadConfig() {
     try {
       setLoading(true);
@@ -35,19 +36,15 @@ export default function ConfigView() {
           address: cfg.address || '',
           phone: cfg.phone || '',
           email: cfg.email || '',
-          currency: cfg.currency || ''
+          currency: cfg.currency || '',
+          exchange_rate: cfg.exchange_rate || ''
         });
 
-        // Mostrar logo si existe
-        if (cfg.logo_path) {
-          setPreview('http://localhost:5001' + cfg.logo_path);
-        } else {
-          setPreview('');
-        }
+        setPreview(cfg.logo_path ? 'http://localhost:5001' + cfg.logo_path : '');
       }
-    } catch (err) {
-      console.error('Error cargando configuración:', err);
-      showMessage('Error al cargar la configuración', 'error');
+    } catch (error) {
+      console.error(error);
+      showMessage('❌ Error al cargar la configuración', 'error');
     } finally {
       setLoading(false);
     }
@@ -62,7 +59,7 @@ export default function ConfigView() {
     if (file) {
       setLogo(file);
       setFileName(file.name);
-      setPreview(URL.createObjectURL(file)); // vista previa inmediata
+      setPreview(URL.createObjectURL(file));
     }
   }
 
@@ -71,37 +68,36 @@ export default function ConfigView() {
     setTimeout(() => setMessage({ text: '', type: '' }), 4000);
   }
 
-  // Guardar cambios en backend
   async function save(e) {
     e.preventDefault();
     setLoading(true);
 
-    const fd = new FormData();
-    Object.keys(config).forEach(key => {
-      fd.append(key, config[key]);
+    const formData = new FormData();
+    Object.entries(config).forEach(([key, value]) => {
+      formData.append(key, value?.toString() || '');
     });
 
-    if (logo) fd.append('logo', logo);
+    if (logo) formData.append('logo', logo);
 
     try {
       const res = await fetch('http://localhost:5001/api/config', {
         method: 'PUT',
-        body: fd
+        body: formData
       });
 
       const data = await res.json();
 
       if (data.ok) {
-        showMessage(data.message || '✅ Configuración guardada', 'success');
-        setLogo(null);        // limpiar archivo seleccionado
-        setFileName('');      // limpiar nombre de archivo
-        loadConfig();         // recargar configuración y logo
+        showMessage('✅ Configuración guardada correctamente', 'success');
+        setLogo(null);
+        setFileName('');
+        loadConfig();
       } else {
         showMessage(data.error || '❌ Error al guardar', 'error');
       }
-    } catch (err) {
-      console.error('Error al guardar:', err);
-      showMessage('❌ Error al guardar la configuración', 'error');
+    } catch (error) {
+      console.error(error);
+      showMessage('❌ Error de conexión con el servidor', 'error');
     } finally {
       setLoading(false);
     }
@@ -119,32 +115,48 @@ export default function ConfigView() {
 
       <div className="config-wrapper">
         <div className="form-section">
-          {/** Campos de texto */}
-          {['company_name', 'ruc', 'address', 'phone', 'email', 'currency'].map((field) => (
-            <div className="input-group" key={field}>
-              <label className="input-label">{field.replace('_', ' ').toUpperCase()}</label>
+
+          {[
+            { name: 'company_name', label: 'Nombre de la empresa' },
+            { name: 'ruc', label: 'RUC' },
+            { name: 'address', label: 'Dirección' },
+            { name: 'phone', label: 'Teléfono' },
+            { name: 'email', label: 'Correo electrónico' },
+            { name: 'currency', label: 'Moneda' },
+            { name: 'exchange_rate', label: 'Tasa de cambio (USD → C$)' }
+          ].map((field) => (
+            <div className="input-group" key={field.name}>
+              <label className="input-label">{field.label}</label>
+
               <input
-                name={field}
-                value={config[field]}
+                type={
+                  field.name === 'email'
+                    ? 'email'
+                    : field.name === 'exchange_rate'
+                    ? 'number'
+                    : 'text'
+                }
+                step={field.name === 'exchange_rate' ? '0.01' : undefined}
+                name={field.name}
+                value={config[field.name]}
                 onChange={handleChange}
-                placeholder={`Ingrese ${field.replace('_', ' ')}`}
+                placeholder={`Ingrese ${field.label.toLowerCase()}`}
                 className="input-field"
                 disabled={loading}
-                type={field === 'email' ? 'email' : 'text'}
               />
             </div>
           ))}
 
-          {/** Logo */}
+          {/* LOGO */}
           <div className="input-group">
             <label className="input-label">Logo de la empresa</label>
             <div className="file-input-wrapper">
               <input
                 type="file"
-                onChange={handleFile}
                 accept="image/*"
-                className="file-input"
+                onChange={handleFile}
                 disabled={loading}
+                className="file-input"
               />
               {fileName && <span className="file-name">{fileName}</span>}
             </div>
@@ -156,21 +168,25 @@ export default function ConfigView() {
             onClick={save}
             disabled={loading}
           >
-            {loading ? '⏳ Guardando...' : '💾 Guardar Configuración'}
+            {loading ? '⏳ Guardando...' : '💾 Guardar configuración'}
           </button>
         </div>
 
-        {/** Vista previa del logo */}
+        {/* PREVIEW LOGO */}
         <div className="preview-section">
-          <h3>Vista Previa del Logo</h3>
+          <h3>Vista previa del logo</h3>
           <div className="preview-container">
             {preview ? (
-              <img src={preview} alt="Vista previa del logo" className="logo-preview" />
+              <img
+                src={preview}
+                alt="Vista previa del logo"
+                className="logo-preview"
+              />
             ) : (
               <div className="empty-preview">
                 <p>📁 No se ha seleccionado ningún logo</p>
-                <p>Selecciona un archivo de imagen para previsualizarlo aquí</p>
-                <p style={{ fontSize: '14px', marginTop: '10px', color: '#718096' }}>
+                <p>Selecciona una imagen para visualizarla aquí</p>
+                <p style={{ fontSize: '14px', color: '#718096' }}>
                   Formatos recomendados: PNG, JPG, SVG
                 </p>
               </div>
