@@ -14,7 +14,7 @@ export default function PedidosView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState([]);
-  
+
   // Nuevo estado para la tasa de cambio
   const [tasaCambio, setTasaCambio] = useState(36.6); // Valor por defecto
 
@@ -57,7 +57,7 @@ export default function PedidosView() {
     // Asegurarse de que precio sea un número
     const p = Number(precio) || 0;
     const tasa = Number(tasaCambio) || 36.6;
-    
+
     if (moneda === "C$") {
       return {
         cordoba: p,
@@ -546,15 +546,15 @@ export default function PedidosView() {
       const precioUnitario = asegurarNumero(detalle.precio_unitario);
       const cantidad = asegurarNumero(detalle.cantidad);
       const tasa = asegurarNumero(tasaCambio);
-      
+
       let precioCordobas = precioUnitario;
       if (detalle.moneda === "$") {
         precioCordobas = precioUnitario * tasa;
       }
-      
+
       return total + (cantidad * precioCordobas);
     }, 0);
-    
+
     return total.toFixed(2);
   };
 
@@ -598,6 +598,8 @@ export default function PedidosView() {
       pedido.total.toString().includes(searchLower)
     );
   });
+  // Suponiendo que guardas el rol al iniciar sesión
+  const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
 
   // Estados de carga y error
   if (loading) return <p>Cargando pedidos...</p>;
@@ -627,9 +629,9 @@ export default function PedidosView() {
             >
               Descargar PDF Seleccionados ({selectedPedido.length})
             </button>
-           </div>
+          </div>
         </div>
-        
+
         {/* Info de tasa de cambio */}
         <div className="tasa-info" style={{
           fontSize: '15px',
@@ -657,6 +659,7 @@ export default function PedidosView() {
                   <th>N° de pedido</th>
                   <th>Creado por</th>
                   <th style={{ width: '120px' }}>Estado</th>
+                  <th>Actualizado por</th>
                   <th>Fecha</th>
                   <th>Proveedor</th>
                   <th>Total C$</th>
@@ -670,7 +673,7 @@ export default function PedidosView() {
                   const totalPedido = asegurarNumero(pedido.total);
                   const tasa = asegurarNumero(tasaCambio);
                   const totalDolares = tasa > 0 ? (totalPedido / tasa).toFixed(2) : "0.00";
-                  
+
                   return (
                     <tr key={pedido.id_pedido}>
                       <td>
@@ -685,7 +688,7 @@ export default function PedidosView() {
                       <td>{getUserName(pedido.id_user)}</td>
                       <td>
                         <div className="td-estado">
-                          <div 
+                          <div
                             className={`estado-bola estado-con-tooltip ${pedido.estado?.toLowerCase() || 'default'}`}
                             data-tooltip={`Estado: ${pedido.estado}`}
                           >
@@ -693,34 +696,55 @@ export default function PedidosView() {
                           </div>
                         </div>
                       </td>
+                      <td>{getUserName(pedido.aprobado_por)}</td>
                       <td>{new Date(pedido.fecha_pedido).toLocaleDateString('es-NI')}</td>
                       <td>{getProviderName(pedido.id_proveedor)}</td>
                       <td style={{ fontWeight: 'bold' }}>{formatCurrency(pedido.total, "C$")}</td>
                       <td style={{ color: '#28a745', fontWeight: 'bold' }}>{formatCurrency(totalDolares, "$")}</td>
                       <td>
-                        <button
-                          onClick={() => handleEdit(pedido)}
-                          className="btn-edit"
-                          title="Editar pedido"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDelete(pedido.id_pedido)}
-                          className="btn-delete"
-                          title="Eliminar pedido"
-                        >
-                          🗑️
-                        </button>
-                        <button
-                          onClick={() => handleDescargarPDF(pedido.id_pedido)}
-                          className="btn-create-order"
-                          title="Descargar PDF"
-                          style={{ marginLeft: '5px', padding: '0.4rem 0.75rem' }}
-                        >
-                          PDF
-                        </button>
+                        {/* Obtener rol del usuario (puede venir de localStorage o estado global) */}
+                        {(() => {
+                          const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
+
+                          return (
+                            <>
+                              {/* Editar solo admins */}
+                              {rolUsuario === "admin" && (
+                                <button
+                                  onClick={() => handleEdit(pedido)}
+                                  className="btn-edit"
+                                  title="Editar pedido"
+                                >
+                                  ✏️
+                                </button>
+                              )}
+
+                              {/* Eliminar solo admins */}
+                              {rolUsuario === "admin" && (
+                                <button
+                                  onClick={() => handleDelete(pedido.id_pedido)}
+                                  className="btn-delete"
+                                  title="Eliminar pedido"
+                                >
+                                  🗑️
+                                </button>
+                              )}
+
+                              {rolUsuario === "admin" && (
+                                <button
+                                  onClick={() => handleDescargarPDF(pedido.id_pedido)}
+                                  className="btn-create-order"
+                                  title="Descargar PDF"
+                                  style={{ marginLeft: '5px', padding: '0.4rem 0.75rem' }}
+                                >
+                                  PDF
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </td>
+
                     </tr>
                   );
                 })}
@@ -735,7 +759,7 @@ export default function PedidosView() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Editar Pedido #{editingPedido.id_pedido}</h3>
-            
+
             {/* Info de tasa de cambio en el modal */}
             <div className="tasa-info-modal" style={{
               fontSize: '15px',
@@ -814,8 +838,8 @@ export default function PedidosView() {
                           setEditingPedido(prev => ({ ...prev, estado }))
                         }
                       />
-                      <label 
-                        htmlFor={`estado-${estado}`} 
+                      <label
+                        htmlFor={`estado-${estado}`}
                         className={`estado-radio-label estado-${estado.toLowerCase()}`}
                       >
                         {estado}
@@ -850,15 +874,15 @@ export default function PedidosView() {
                           const cantidad = asegurarNumero(d.cantidad);
                           const tasa = asegurarNumero(tasaCambio);
                           const moneda = d.moneda || "C$";
-                          
+
                           let precioCordobas = precioUnitario;
                           if (moneda === "$") {
                             precioCordobas = precioUnitario * tasa;
                           }
-                          
+
                           const precioCordobasNum = Number(precioCordobas) || 0;
                           const subtotalCordobas = cantidad * precioCordobasNum;
-                          
+
                           return (
                             <tr key={index}>
                               <td>
@@ -1017,12 +1041,12 @@ export default function PedidosView() {
                       const precio = asegurarNumero(producto.precio);
                       const moneda = producto.tipo_moneda || "C$";
                       const tasa = asegurarNumero(tasaCambio);
-                      
+
                       let precioCordobas = precio;
                       if (moneda === "$") {
                         precioCordobas = precio * tasa;
                       }
-                      
+
                       return (
                         <tr key={producto.id_producto}>
                           <td>{producto.nombre_producto}</td>

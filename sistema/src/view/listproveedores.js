@@ -32,7 +32,7 @@ const ProveedoresList = () => {
     if (!window.confirm("¿Estás seguro de eliminar este proveedor?")) {
       return;
     }
-    
+
     axios
       .delete(`http://localhost:5001/api/proveedores/${id}`)
       .then(() => {
@@ -72,8 +72,8 @@ const ProveedoresList = () => {
         // Actualizar en la lista local
         setProveedores((prevProveedores) =>
           prevProveedores.map((proveedor) =>
-            proveedor?.id_proveedor === savedProveedor.id_proveedor 
-              ? savedProveedor 
+            proveedor?.id_proveedor === savedProveedor.id_proveedor
+              ? savedProveedor
               : proveedor
           )
         );
@@ -85,11 +85,11 @@ const ProveedoresList = () => {
       // Cerrar formulario
       setShowForm(false);
       setCurrentProveedor(null);
-      
+
       // Opcional: Recargar datos del servidor para asegurar consistencia
       const response = await axios.get("http://localhost:5001/api/proveedores");
       setProveedores(response.data || []);
-      
+
     } catch (error) {
       console.error("Error al guardar proveedor:", error);
     }
@@ -98,19 +98,20 @@ const ProveedoresList = () => {
   // FUNCIÓN: Filtrar proveedores según término de búsqueda
   const filteredProveedores = Array.isArray(proveedores)
     ? proveedores.filter((proveedor) => {
-        if (!proveedor) return false;
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          proveedor.id_proveedor?.toString().includes(searchLower) ||
-          proveedor.nombre_proveedor?.toLowerCase().includes(searchLower) ||
-          proveedor.telefono?.toString().includes(searchLower)
-        );
-      })
+      if (!proveedor) return false;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        proveedor.id_proveedor?.toString().includes(searchLower) ||
+        proveedor.nombre_proveedor?.toLowerCase().includes(searchLower) ||
+        proveedor.telefono?.toString().includes(searchLower)
+      );
+    })
     : [];
 
   // Estados de carga y error
   if (loading) return <p>Cargando proveedores...</p>;
   if (error) return <p>Error: {error}</p>;
+  const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
 
   return (
     <div className="order-list">
@@ -136,9 +137,9 @@ const ProveedoresList = () => {
       {/* Renderizado condicional: formulario o tabla de proveedores */}
       {showForm ? (
         // Usa ProveedorForm para ambos (crear y editar)
-        <ProveedorForm 
-          onSave={handleSave} 
-          onCancel={handleCancel} 
+        <ProveedorForm
+          onSave={handleSave}
+          onCancel={handleCancel}
           proveedor={currentProveedor} // Pasa el proveedor si está en modo edición
         />
       ) : (
@@ -160,26 +161,30 @@ const ProveedoresList = () => {
                   <td>{proveedor?.nombre_proveedor}</td>
                   <td>{proveedor?.telefono || 'N/A'}</td>
                   <td>
+
                     <button
                       onClick={() => handleEdit(proveedor)}
                       className="btn btn-edit"
                     >
                       ✏️
                     </button>
-                    <button
-                      onClick={() => handleDelete(proveedor?.id_proveedor)}
-                      className="btn btn-delete"
-                    >
-                      🗑️
-                    </button>
+                    {rolUsuario === "admin" && (
+                      <button
+                        onClick={() => handleDelete(proveedor?.id_proveedor)}
+                        className="btn btn-delete"
+                      >
+                        🗑️
+                      </button>
+                    )}
+
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan="4">
-                  {searchTerm ? 
-                    "No se encontraron proveedores con ese criterio" : 
+                  {searchTerm ?
+                    "No se encontraron proveedores con ese criterio" :
                     "No hay proveedores disponibles"}
                 </td>
               </tr>

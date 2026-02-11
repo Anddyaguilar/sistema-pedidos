@@ -34,13 +34,13 @@ const mostrarDetallesPedido = async (req, res) => {
       return res.status(404).json({ error: 'No se encontraron detalles para este pedido' });
     }
 
-    ////console.log("Detalles obtenidos:", results); // Para debug
+    //console.log("Detalles obtenidos:", results); // Para debug
     res.json(results);
   } catch (error) {
     //console.error('Error al obtener los detalles del pedido:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener los detalles del pedido', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Error al obtener los detalles del pedido',
+      details: error.message
     });
   }
 };
@@ -75,14 +75,14 @@ const obtenerPedidoConDetalles = async (req, res) => {
 
 // Crear un nuevo pedido
 const crearPedido = async (req, res) => {
-  ////console.log('📥 BODY RECIBIDO:', req.body);
-  ////console.log('👤 USER JWT:', req.user);
+  //console.log('📥 BODY RECIBIDO:', req.body);
+  //console.log('👤 USER JWT:', req.user);
 
   const { fecha_pedido, id_proveedor, detalles } = req.body;
 
   // Validación básica
   if (!fecha_pedido || !id_proveedor || !Array.isArray(detalles) || detalles.length === 0) {
-    ////console.log('❌ Error: datos incompletos o sin detalles');
+    //console.log('❌ Error: datos incompletos o sin detalles');
     return res.status(400).json({ error: 'Datos incompletos o sin detalles' });
   }
 
@@ -92,11 +92,11 @@ const crearPedido = async (req, res) => {
     const id_usuario = req.user?.id;
     if (!id_usuario) {
       await db.query('ROLLBACK');
-      ////console.log('❌ Usuario no identificado');
+      //console.log('❌ Usuario no identificado');
       return res.status(400).json({ error: 'Usuario no autenticado' });
     }
 
-    ////console.log('🧾 Detalles recibidos CRUDOS:', detalles);
+    //console.log('🧾 Detalles recibidos CRUDOS:', detalles);
 
     // Filtrar y normalizar detalles válidos
     const detallesValues = detalles
@@ -114,11 +114,11 @@ const crearPedido = async (req, res) => {
         d.precio_unitario > 0
       );
 
-    ////console.log('✅ Detalles válidos BACKEND:', detallesValues);
+    //console.log('✅ Detalles válidos BACKEND:', detallesValues);
 
     if (detallesValues.length === 0) {
       await db.query('ROLLBACK');
-      ////console.log('❌ No hay detalles válidos');
+      //console.log('❌ No hay detalles válidos');
       return res.status(400).json({
         error: 'Los productos enviados no son válidos',
         detalles_recibidos: detalles
@@ -132,7 +132,7 @@ const crearPedido = async (req, res) => {
     );
 
     const id_pedido = pedidoResult.insertId;
-    ////console.log('🆕 Pedido creado con ID:', id_pedido);
+    //console.log('🆕 Pedido creado con ID:', id_pedido);
 
     // Preparar detalles para insert múltiple
     const insertValues = detallesValues.map(d => [
@@ -161,7 +161,7 @@ const crearPedido = async (req, res) => {
 
     await db.query('COMMIT');
 
-   // //console.log('✅ Pedido creado correctamente');
+    // console.log('✅ Pedido creado correctamente');
 
     res.status(201).json({ message: 'Pedido creado', id_pedido });
 
@@ -172,45 +172,81 @@ const crearPedido = async (req, res) => {
   }
 };
 
-
-
-
-// Descargar PDF de un pedido
-
-const path = require('path');
 const fs = require('fs');
-// descargar pdf
+
 const descargarPDF = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 1. Obtener datos del pedido
-    const [pedido] = await db.query('SELECT * FROM pedido WHERE id_pedido = ?', [id]);
+
+    // =====================================
+    // 1. PEDIDO + USUARIOS DESDE BD
+    // =====================================
+    const [pedido] = await db.query(`
+      SELECT 
+        p.*,
+
+        creador.nombre AS nombre_creador,
+        aprobador.nombre AS nombre_aprobador,
+
+        CASE 
+          WHEN p.estado = 'Aprobado' THEN aprobador.nombre
+          WHEN p.estado = 'Pendiente' THEN creador.nombre
+          WHEN p.estado = 'Anulado' THEN creador.nombre
+          ELSE creador.nombre
+        END AS responsable
+
+      FROM pedido p
+
+      LEFT JOIN users creador 
+        ON creador.id_users = p.id_user
+
+      LEFT JOIN users aprobador 
+        ON creador.id_users = p.id_user
+        AND aprobador.id_users = p.aprobado_por
+
+      WHERE p.id_pedido = ?
+    `, [id]);
+
     if (!pedido || pedido.length === 0) {
       return res.status(404).json({ error: 'El pedido no existe' });
     }
 
-    // 2. Obtener datos de la empresa y tasa de cambio
+    const pedidoData = pedido[0];
+
+    const estadoActual = pedidoData.estado;
+    const responsable = pedidoData.responsable || "Administrador";
+
+    // =====================================
+    // 2. CONFIGURACIÓN
+    // =====================================
     const [config] = await db.query('SELECT * FROM system_config LIMIT 1');
-    const comp = (config && config[0]) ? config[0] : {};
+    const comp = config?.[0] || {};
 
     const companyName = comp.company_name || 'Nombre de la empresa';
-    const ruc = comp.ruc || '';
-    const address = comp.address || '';
-    const email = comp.email || '';
-    const phone = comp.phone || '';
     const exchangeRate = parseFloat(comp.exchange_rate) || 36.6;
-    const logoPath = comp.logo_path && fs.existsSync(comp.logo_path) ? comp.logo_path : null;
+    const logoPath =
+      comp.logo_path && fs.existsSync(comp.logo_path)
+        ? comp.logo_path
+        : null;
 
-    // 3. Nombre del proveedor
+    // =====================================
+    // 3. PROVEEDOR
+    // =====================================
     let nombreProveedor = "Proveedor no especificado";
+
     const [proveedor] = await db.query(
       'SELECT nombre_proveedor FROM proveedor WHERE id_proveedor = ?',
-      [pedido[0].id_proveedor]
+      [pedidoData.id_proveedor]
     );
-    if (proveedor && proveedor.length > 0) nombreProveedor = proveedor[0].nombre_proveedor;
 
-    // 4. Detalles del pedido
+    if (proveedor.length > 0) {
+      nombreProveedor = proveedor[0].nombre_proveedor;
+    }
+
+    // =====================================
+    // 4. DETALLES
+    // =====================================
     const [detalles] = await db.query(`
       SELECT 
         dp.cantidad, 
@@ -220,9 +256,14 @@ const descargarPDF = async (req, res) => {
         p.tipo_moneda
       FROM detalles_pedido dp
       JOIN productos p ON dp.id_producto = p.id_producto
-      WHERE dp.id_pedido = ?`, [id]);
+      WHERE dp.id_pedido = ?`, 
+      [id]
+    );
 
-    // 5. Configurar PDF
+    // =====================================
+    // 5. CONFIGURAR PDF (TU DISEÑO ORIGINAL)
+    // =====================================
+
     const doc = new PDFDocument({
       margin: 40,
       size: 'A4',
@@ -236,6 +277,8 @@ const descargarPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="pedido_${id}.pdf"`);
 
+    doc.pipe(res);
+
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
     const marginBottom = 40;
@@ -243,7 +286,6 @@ const descargarPDF = async (req, res) => {
     const tableLeftX = 40;
     const rowHeight = 27;
 
-    // Ancho de columnas ajustado
     const colWidths = {
       num: 30,
       codigo: 85,
@@ -253,108 +295,102 @@ const descargarPDF = async (req, res) => {
       subtotal: 80
     };
 
-    let currentY = 120;
+    let currentY = 40;
 
-    // Función para convertir a córdobas
     const convertirACordobas = (precio, moneda) => {
       const precioNum = parseFloat(precio) || 0;
-      if (moneda === '$') {
-        return precioNum * exchangeRate;
-      }
+      if (moneda === '$') return precioNum * exchangeRate;
       return precioNum;
     };
 
-    // Función para agregar header de página
+    // =====================================
+    // HEADER (SIN CAMBIOS)
+    // =====================================
     function addHeader() {
-      // Logo
+
+      const empresaLeftX = logoPath ? 130 : tableLeftX;
+
       if (logoPath) {
         try {
-          doc.image(logoPath, tableLeftX, 40, { width: 80, height: 50, fit: [80,50] });
-        } catch (err) {
-          console.warn('Error al cargar logo:', err.message);
-        }
+          doc.image(logoPath, tableLeftX, currentY, {
+            width: 80,
+            height: 50,
+            fit: [80, 50]
+          });
+        } catch (err) {}
       }
-       doc.fontSize(9).font('Helvetica')
-        //.text(`RUC: ${ruc}`, empresaLeftX, 55)
-       // .text(`Dirección: ${address}`, empresaLeftX, 67, { width: pageWidth - empresaLeftX - 40 })
-       // .text(`Email: ${email}`, empresaLeftX, 79)
-        //.text(`Tel: ${phone}`, empresaLeftX, 91);
 
-      // Datos de la empresa - MÁS COMPACTO
-      const empresaLeftX = logoPath ? 130 : tableLeftX;
-      doc.fontSize(14).font('Helvetica-Bold')
-        .text(companyName, empresaLeftX, 90, { align: 'center', width: pageWidth - empresaLeftX - 4 });
+      doc.font('Helvetica-Bold').fontSize(16)
+        .text(companyName, empresaLeftX, currentY, {
+          align: 'center',
+          width: pageWidth - empresaLeftX - 40
+        });
 
-      
-      // Datos del pedido - EN LÍNEAS SEPARADAS
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
-        .text(`PEDIDO N°: ${id}`, tableLeftX, 115)
-        .font('Helvetica')
-        .text(`Fecha: ${new Date(pedido[0].fecha_pedido).toLocaleDateString()}`, tableLeftX, 130)
-        .text(`Proveedor: ${nombreProveedor}`, tableLeftX, 145);
+      currentY += 25;
 
-      // Línea separadora
-      doc.moveTo(tableLeftX, 160).lineTo(pageWidth - 40, 160).stroke('#333333');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000')
+        .text(`Pedido N°: ${id}`, tableLeftX, currentY)
+        .text(`Fecha: ${new Date(pedidoData.fecha_pedido).toLocaleDateString()}`, tableLeftX, currentY + 12)
+        .text(`Proveedor: ${nombreProveedor}`, tableLeftX, currentY + 24)
+        .text(`Estado: ${estadoActual}`, tableLeftX, currentY + 36)
+        .text(`Responsable: ${responsable}`, tableLeftX, currentY + 48);
 
-      currentY = 165;
+      currentY += 70;
+
+      doc.moveTo(tableLeftX, currentY)
+        .lineTo(pageWidth - 40, currentY)
+        .stroke('#333');
+
+      currentY += 5;
+
       drawTableHeader(currentY);
       currentY += rowHeight;
     }
 
     function drawTableHeader(y) {
-      doc.rect(tableLeftX, y, tableWidth, rowHeight).fill('#1a4693');
-      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
+      doc.fillColor('#1a4693').font('Helvetica-Bold').fontSize(10);
 
-      const columnPositions = {
-        num: tableLeftX + 5,
-        codigo: tableLeftX + colWidths.num,
-        producto: tableLeftX + colWidths.num + colWidths.codigo,
-        cantidad: tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto,
-        precio: tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad,
-        subtotal: tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio
-      };
-
-      doc.text('#', columnPositions.num, y + 9, { width: colWidths.num - 10, align: 'center' })
-        .text('CÓDIGO', columnPositions.codigo, y + 9, { width: colWidths.codigo, align: 'center' })
-        .text('DESCRIPCIÓN', columnPositions.producto, y + 9, { width: colWidths.producto, align: 'center' })
-        .text('CANT.', columnPositions.cantidad, y + 9, { width: colWidths.cantidad, align: 'center' })
-        .text('PRECIO', columnPositions.precio, y + 9, { width: colWidths.precio, align: 'right' })
-        .text('SUBTOTAL', columnPositions.subtotal, y + 9, { width: colWidths.subtotal, align: 'right' });
+      doc.text('#', tableLeftX + 5, y + 9, { width: colWidths.num - 10, align: 'center' })
+        .text('CÓDIGO', tableLeftX + colWidths.num, y + 9, { width: colWidths.codigo, align: 'center' })
+        .text('DESCRIPCIÓN', tableLeftX + colWidths.num + colWidths.codigo, y + 9, { width: colWidths.producto, align: 'center' })
+        .text('CANT.', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto, y + 9, { width: colWidths.cantidad, align: 'center' })
+        .text('PRECIO', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, y + 9, { width: colWidths.precio, align: 'right' })
+        .text('SUBTOTAL', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio, y + 9, { width: colWidths.subtotal, align: 'right' });
     }
 
     function checkPageHeight(y, heightNeeded = rowHeight) {
       if (y + heightNeeded > pageHeight - marginBottom) {
         doc.addPage();
+        currentY = 40;
         addHeader();
         return currentY;
       }
       return y;
     }
 
-    // Inicializar header
     addHeader();
 
-    // Filas de la tabla
+    // =====================================
+    // FILAS (SIN CAMBIOS)
+    // =====================================
     let totalCordobas = 0;
-    
+
     detalles.forEach((detalle, i) => {
+
       const cantidad = parseFloat(detalle.cantidad) || 0;
       const precioOriginal = parseFloat(detalle.precio_unitario) || 0;
       const moneda = detalle.tipo_moneda || 'C$';
-      
-      // Convertir a córdobas
+
       const precioCordobas = convertirACordobas(precioOriginal, moneda);
       const subtotalCordobas = cantidad * precioCordobas;
-      
       totalCordobas += subtotalCordobas;
 
-      currentY = checkPageHeight(currentY, rowHeight);
+      currentY = checkPageHeight(currentY);
 
-      // Alternar colores
-      if (i % 2 === 0) doc.rect(tableLeftX, currentY, tableWidth, rowHeight).fill('#f8f9fa');
+      if (i % 2 === 0)
+        doc.rect(tableLeftX, currentY, tableWidth, rowHeight).fill('#f8f9fa');
 
-      // Posiciones de columnas para esta fila
-      const columnPositions = {
+      const colPos = {
         num: tableLeftX + 5,
         codigo: tableLeftX + colWidths.num,
         producto: tableLeftX + colWidths.num + colWidths.codigo,
@@ -363,70 +399,70 @@ const descargarPDF = async (req, res) => {
         subtotal: tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio
       };
 
-      // Texto de la fila
-      doc.fillColor('#000000').font('Helvetica').fontSize(9)
-        .text(i + 1, columnPositions.num, currentY + 9, { width: colWidths.num - 10, align: 'center' })
-        .text(detalle.codigo_original || 'N/A', columnPositions.codigo, currentY + 9, { width: colWidths.codigo })
-        .text(detalle.nombre_producto || '', columnPositions.producto, currentY + 9, { 
-          width: colWidths.producto, 
-          ellipsis: true,
-          height: rowHeight - 5
-        })
-        .text(cantidad.toString(), columnPositions.cantidad, currentY + 9, { width: colWidths.cantidad, align: 'center' })
-        .text(`C$${precioCordobas.toFixed(2)}`, columnPositions.precio, currentY + 9, { width: colWidths.precio, align: 'right' })
-        .text(`C$${subtotalCordobas.toFixed(2)}`, columnPositions.subtotal, currentY + 9, { width: colWidths.subtotal, align: 'right' });
+      doc.fillColor('#000').font('Helvetica').fontSize(9)
+        .text(i + 1, colPos.num, currentY + 9, { width: colWidths.num - 10, align: 'center' })
+        .text(detalle.codigo_original || 'N/A', colPos.codigo, currentY + 9, { width: colWidths.codigo })
+        .text(detalle.nombre_producto || '', colPos.producto, currentY + 9, { width: colWidths.producto, ellipsis: true })
+        .text(cantidad.toString(), colPos.cantidad, currentY + 9, { width: colWidths.cantidad, align: 'center' })
+        .text(`C$${precioCordobas.toFixed(2)}`, colPos.precio, currentY + 9, { width: colWidths.precio, align: 'right' })
+        .text(`C$${subtotalCordobas.toFixed(2)}`, colPos.subtotal, currentY + 9, { width: colWidths.subtotal, align: 'right' });
 
       currentY += rowHeight;
     });
 
-    // Totales
+    // =====================================
+    // TOTALES (SIN CAMBIOS)
+    // =====================================
     const totalDolares = totalCordobas / exchangeRate;
 
     currentY = checkPageHeight(currentY, 50);
-    
-    // Línea separadora para totales
-    doc.moveTo(tableLeftX, currentY).lineTo(tableLeftX + tableWidth, currentY).stroke('#333333');
+
+    doc.moveTo(tableLeftX, currentY)
+      .lineTo(tableLeftX + tableWidth, currentY)
+      .stroke('#333');
+
     currentY += 10;
 
-    // Total en Córdobas
     doc.font('Helvetica-Bold').fontSize(12)
-      .text('TOTAL C$:', 
-        tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, 
-        currentY,
-        { width: colWidths.precio, align: 'right' }
-      )
+      .text('TOTAL C$:', tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad,
+        currentY, { width: colWidths.precio, align: 'right' })
       .text(`C$${totalCordobas.toFixed(2)}`,
         tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio,
-        currentY,
-        { width: colWidths.subtotal, align: 'right' }
-      );
+        currentY, { width: colWidths.subtotal, align: 'right' });
 
     currentY += 15;
 
-    // Total en Dólares (más pequeño y con color diferente)
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#28a745')
-      .text('TOTAL $:', 
-        tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad, 
-        currentY,
-        { width: colWidths.precio, align: 'right' }
-      )
+      .text('TOTAL $:',
+        tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad,
+        currentY, { width: colWidths.precio, align: 'right' })
       .text(`$${totalDolares.toFixed(2)}`,
         tableLeftX + colWidths.num + colWidths.codigo + colWidths.producto + colWidths.cantidad + colWidths.precio,
-        currentY,
-        { width: colWidths.subtotal, align: 'right' }
-      );
+        currentY, { width: colWidths.subtotal, align: 'right' });
 
-    // NOTA: Removí completamente la línea que mostraba la tasa de cambio
-
-    // Finalizar PDF
-    doc.pipe(res);
     doc.end();
 
   } catch (error) {
     console.error('Error al generar el PDF:', error);
-    if (!res.headersSent) res.status(500).json({ error: 'Error al generar el PDF', message: error.message });
+    if (!res.headersSent)
+      res.status(500).json({
+        error: 'Error al generar el PDF',
+        message: error.message
+      });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Eliminar un pedido y sus detalles
 const eliminarPedido = async (req, res) => {
@@ -513,65 +549,48 @@ const obtenerDetallesConProductos = async (req, res) => {
 ///actualizar pedido
 const actualizarPedido = async (req, res) => {
   const { id } = req.params;
-  const { estado, detalles, eliminados } = req.body;
-
-  if (!estado || !Array.isArray(detalles)) {
-    return res.status(400).json({ error: 'Datos incompletos o inválidos' });
-  }
+  const { estado } = req.body;
+  const idUsuario = req.user.id; // 👈 USUARIO LOGUEADO
 
   try {
-    await db.query('BEGIN');
+    // Obtener estado actual
+    const [rows] = await db.query(
+      'SELECT estado FROM pedido WHERE id_pedido = ?',
+      [id]
+    );
 
-    // 1️⃣ Eliminar detalles marcados
-    if (Array.isArray(eliminados) && eliminados.length > 0) {
-      await db.query('DELETE FROM detalles_pedido WHERE id_detalle IN (?) AND id_pedido = ?', [eliminados, id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
     }
 
-    // 2️⃣ Actualizar solo el estado
+    const estadoAnterior = rows[0].estado;
+
+    // Actualizar estado
     await db.query(
       'UPDATE pedido SET estado = ? WHERE id_pedido = ?',
       [estado, id]
     );
 
-    // 3️⃣ Insertar o actualizar detalles
-    for (const item of detalles) {
-      const { id_detalle, id_producto, cantidad } = item;
-
-      const [productoRows] = await db.query('SELECT precio FROM productos WHERE id_producto = ?', [id_producto]);
-      if (!productoRows || productoRows.length === 0) continue;
-
-      const precio_unitario = productoRows[0].precio;
-
-      if (id_detalle) {
-        await db.query(
-          'UPDATE detalles_pedido SET id_producto = ?, cantidad = ?, precio_unitario = ? WHERE id_detalle = ? AND id_pedido = ?',
-          [id_producto, cantidad, precio_unitario, id_detalle, id]
-        );
-      } else {
-        await db.query(
-          'INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
-          [id, id_producto, cantidad, precio_unitario]
-        );
-      }
+    // SOLO si pasa a APROBADO
+    if (
+      estado.trim().toUpperCase() === 'APROBADO' &&
+      estadoAnterior.trim().toUpperCase() !== 'APROBADO'
+    ) {
+      await db.query(
+        `UPDATE pedido
+         SET aprobado_por = ?, fecha_aprobacion = NOW()
+         WHERE id_pedido = ?`,
+        [idUsuario, id]
+      );
     }
 
-    // 4️⃣ Actualizar total
-    await db.query(
-      `UPDATE pedido 
-       SET total = (SELECT COALESCE(SUM(cantidad * precio_unitario),0) FROM detalles_pedido WHERE id_pedido = ?)
-       WHERE id_pedido = ?`,
-      [id, id]
-    );
+    res.json({ message: 'Estado actualizado correctamente' });
 
-    await db.query('COMMIT');
-    res.status(200).json({ message: 'Pedido actualizado correctamente' });
   } catch (error) {
-    await db.query('ROLLBACK');
-    console.error('Error al actualizar el pedido:', error.message);
-    res.status(500).json({ error: 'Error al actualizar el pedido', details: error.message });
+    console.error('Error al actualizar estado:', error);
+    res.status(500).json({ error: 'Error interno' });
   }
 };
-
 
 
 // optener producto por proveedor 
@@ -585,7 +604,7 @@ const obtenerProductosPorProveedor = async (req, res) => {
   }
 
   try {
-    ////console.log("Proveedor ID recibido:", proveedorId);
+    //console.log("Proveedor ID recibido:", proveedorId);
     const [productos] = await db.query(
       `SELECT * FROM productos
        WHERE id_proveedor = ?

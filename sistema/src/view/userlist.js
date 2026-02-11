@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../style/style.css";
 
 const UsuariosList = () => {
@@ -8,6 +9,7 @@ const UsuariosList = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [usuarioEditandoId, setUsuarioEditandoId] = useState(null);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -17,6 +19,9 @@ const UsuariosList = () => {
     contraseña: ''
   });
 
+  // ======================
+  // CARGAR USUARIOS
+  // ======================
   const cargarUsuarios = async () => {
     try {
       const res = await fetch('http://localhost:5001/api/usuarios');
@@ -35,6 +40,9 @@ const UsuariosList = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // ======================
+  // ABRIR MODALES
+  // ======================
   const abrirCrearModal = () => {
     setFormData({
       nombre: '',
@@ -44,6 +52,7 @@ const UsuariosList = () => {
       contraseña: ''
     });
     setModoEdicion(false);
+    setMostrarPassword(false);
     setModalOpen(true);
   };
 
@@ -58,55 +67,96 @@ const UsuariosList = () => {
 
     setUsuarioEditandoId(usuario.id);
     setModoEdicion(true);
+    setMostrarPassword(false);
     setModalOpen(true);
   };
 
   const cerrarModal = () => {
     setModalOpen(false);
     setUsuarioEditandoId(null);
+    setMostrarPassword(false);
   };
 
+  // ======================
+  // CREAR USUARIO
+  // ======================
   const crearUsuario = async () => {
     try {
-      await fetch('http://localhost:5001/api/usuarios', {
+      const res = await fetch('http://localhost:5001/api/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Error al crear usuario');
+        return;
+      }
+
+      alert(data.message || 'Usuario creado correctamente');
       cargarUsuarios();
       cerrarModal();
-    } catch {
-      setError('Error al crear usuario');
+
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión con el servidor');
     }
   };
 
+  // ======================
+  // ACTUALIZAR USUARIO
+  // ======================
   const actualizarUsuario = async () => {
     try {
-      await fetch(`http://localhost:5001/api/usuarios/${usuarioEditandoId}`, {
+      const res = await fetch(`http://localhost:5001/api/usuarios/${usuarioEditandoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Error al actualizar usuario');
+        return;
+      }
+
+      alert(data.message || 'Usuario actualizado correctamente');
       cargarUsuarios();
       cerrarModal();
-    } catch {
-      setError('Error al actualizar usuario');
+
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión con el servidor');
     }
   };
 
+  // ======================
+  // ELIMINAR USUARIO
+  // ======================
   const eliminarUsuario = async id => {
     if (!window.confirm('¿Eliminar usuario?')) return;
 
     try {
-      await fetch(`http://localhost:5001/api/usuarios/${id}`, {
+      const res = await fetch(`http://localhost:5001/api/usuarios/${id}`, {
         method: 'DELETE'
       });
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Error al eliminar usuario');
+        return;
+      }
+
+      alert(data.message || 'Usuario eliminado correctamente');
       cargarUsuarios();
-    } catch {
-      setError('Error al eliminar usuario');
+
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión con el servidor');
     }
   };
 
@@ -140,13 +190,13 @@ const UsuariosList = () => {
               <td>{usuario.estado}</td>
               <td>
                 <button className="btn-action btn-edit"
-                        onClick={() => abrirEditarModal(usuario)}>
-                   ✏️
+                  onClick={() => abrirEditarModal(usuario)}>
+                  ✏️
                 </button>
 
                 <button className="btn-action btn-delete"
-                        onClick={() => eliminarUsuario(usuario.id)}>
-                    🗑️
+                  onClick={() => eliminarUsuario(usuario.id)}>
+                  🗑️
                 </button>
               </td>
             </tr>
@@ -160,11 +210,19 @@ const UsuariosList = () => {
 
             <h3>{modoEdicion ? 'Editar Usuario' : 'Crear Usuario'}</h3>
 
-            <input name="nombre" placeholder="Nombre"
-                   value={formData.nombre} onChange={handleChange} />
+            <input
+              name="nombre"
+              placeholder="Nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+            />
 
-            <input name="correo" placeholder="Correo"
-                   value={formData.correo} onChange={handleChange} />
+            <input
+              name="correo"
+              placeholder="Correo"
+              value={formData.correo}
+              onChange={handleChange}
+            />
 
             <select name="rol" value={formData.rol} onChange={handleChange}>
               <option value="admin">Admin</option>
@@ -176,8 +234,25 @@ const UsuariosList = () => {
               <option value="inactivo">Inactivo</option>
             </select>
 
-            <input type="password" name="contraseña" placeholder="Contraseña"
-                   value={formData.contraseña} onChange={handleChange} />
+            {/* PASSWORD CON REACT ICONS */}
+            <div className="password-wrapper">
+              <input
+                type={mostrarPassword ? "text" : "password"}
+                name="contraseña"
+                placeholder="Contraseña"
+                value={formData.contraseña}
+                onChange={handleChange}
+                className="password-input"
+              />
+
+              <span
+                className="password-icon"
+                onClick={() => setMostrarPassword(!mostrarPassword)}
+              >
+                {mostrarPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+              </span>
+            </div>
+
 
             <div className="modal-actions">
               <button onClick={modoEdicion ? actualizarUsuario : crearUsuario}>

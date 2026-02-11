@@ -24,7 +24,7 @@ async function generateWithRetry(model, input, retries = 5, initialDelay = 2000,
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      ////console.log(`Intento ${attempt + 1} de ${retries}`);
+      //console.log(`Intento ${attempt + 1} de ${retries}`);
       const result = await model.generateContent(input);
       return result;
     } catch (err) {

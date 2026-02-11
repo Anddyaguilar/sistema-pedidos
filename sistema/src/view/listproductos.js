@@ -381,26 +381,26 @@ const NewProductModal = ({
               </table>
             </div>
 
-           
+
           </div>
         )}
 
         {/* ACCIONES MODAL */}
         <div className="modal-actions">
           <button
-                onClick={onInsertDetectedProducts}
-                className="btn-confirm-modal"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner"></span>
-                    Insertando...
-                  </>
-                ) : (
-                  `Insertar ${productosDetectados.length} productos`
-                )}
-              </button>
+            onClick={onInsertDetectedProducts}
+            className="btn-confirm-modal"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="spinner"></span>
+                Insertando...
+              </>
+            ) : (
+              `Insertar ${productosDetectados.length} productos`
+            )}
+          </button>
           <button
             onClick={onClose}
             disabled={isSubmitting}
@@ -701,8 +701,8 @@ const ProductList = () => {
           detalles: detallesValidos
         };
 
-        //console.log('📤 Creando pedido para proveedor:', providerId);
-        //console.log('📤 Payload:', payload);
+        console.log('📤 Creando pedido para proveedor:', providerId);
+        console.log('📤 Payload:', payload);
 
         const response = await axios.post(
           `${API_BASE_URL}/api/pedidos`,
@@ -715,7 +715,7 @@ const ProductList = () => {
           }
         );
 
-        //console.log('✅ Pedido creado:', response.data);
+        console.log('✅ Pedido creado:', response.data);
       }
 
       alert(`✅ ${Object.keys(groupedOrders).length} pedido(s) creado(s) correctamente`);
@@ -891,6 +891,7 @@ const ProductList = () => {
       setIsSubmitting(false);
     }
   };
+   const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
 
   // ================= RENDER =================
   if (loading && products.length === 0) {
@@ -995,6 +996,7 @@ const ProductList = () => {
                         />
                       </td>
                       <td>
+
                         <button
                           onClick={() => handleEditProduct(p)}
                           className="btn-edit"
@@ -1002,13 +1004,16 @@ const ProductList = () => {
                         >
                           ✏️
                         </button>
-                        <button
-                          onClick={() => handleDeleteProduct(p.id_producto)}
-                          className="btn-delete"
-                          title="Eliminar"
-                        >
-                          🗑️
-                        </button>
+                        {rolUsuario === "admin" && (
+                          <button
+                            onClick={() => handleDeleteProduct(p.id_producto)}
+                            className="btn-delete"
+                            title="Eliminar"
+                          >
+                            🗑️
+                          </button>
+                        )}
+
                       </td>
                       <td>{new Date(p.fecha_creacion).toLocaleDateString('es-NI')}</td>
                     </tr>

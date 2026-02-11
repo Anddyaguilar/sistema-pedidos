@@ -54,15 +54,28 @@ const crearUsuario = async (req, res) => {
   }
 
   try {
+    // 🔎 Verificar duplicados
+    const [existe] = await db.query(
+      'SELECT id_users FROM users WHERE nombre = ? OR correo = ?',
+      [nombre, correo]
+    );
+
+    if (existe.length > 0) {
+      return res.status(400).json({
+        error: 'El nombre o el correo ya están registrados'
+      });
+    }
+
     const contraseña_hash = await bcrypt.hash(contraseña, 10);
 
     await db.query(
       `INSERT INTO users (nombre, correo, rol, estado, contraseña_hash)
        VALUES (?, ?, ?, ?, ?)`,
-      [nombre, correo, rol, estado, contraseña_hash]
+      [nombre, correo, rol || 'user', estado || 'activo', contraseña_hash]
     );
 
     res.status(201).json({ message: 'Usuario creado correctamente' });
+
   } catch (err) {
     console.error('Error en crearUsuario:', err);
     res.status(500).json({ error: 'Error en la base de datos' });
@@ -81,6 +94,20 @@ const editarUsuario = async (req, res) => {
   }
 
   try {
+    // 🔎 Verificar duplicados (excluyendo el usuario actual)
+    const [existe] = await db.query(
+      `SELECT id_users FROM users 
+       WHERE (nombre = ? OR correo = ?) 
+       AND id_users != ?`,
+      [nombre, correo, id]
+    );
+
+    if (existe.length > 0) {
+      return res.status(400).json({
+        error: 'El nombre o el correo ya están registrados'
+      });
+    }
+
     let query = 'UPDATE users SET nombre = ?, correo = ?, rol = ?, estado = ?';
     const params = [nombre, correo, rol, estado];
 
@@ -100,6 +127,7 @@ const editarUsuario = async (req, res) => {
     }
 
     res.json({ message: 'Usuario actualizado correctamente' });
+
   } catch (err) {
     console.error('Error en editarUsuario:', err);
     res.status(500).json({ error: 'Error en la base de datos' });
@@ -127,6 +155,7 @@ const eliminarUsuario = async (req, res) => {
     }
 
     res.json({ message: 'Usuario eliminado correctamente' });
+
   } catch (err) {
     console.error('Error en eliminarUsuario:', err);
     res.status(500).json({ error: 'Error en la base de datos' });

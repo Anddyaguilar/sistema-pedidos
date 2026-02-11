@@ -70,6 +70,29 @@
   color: #333;
   font-size: 0.95rem;
 }
+.password-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 10px; /* opcional */
+}
+
+.password-input {
+  width: 100%;
+  padding-right: 45px; /* espacio para el icono */
+  box-sizing: border-box;
+}
+
+.password-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+}
+
 
 .text-muted {
   display: block;

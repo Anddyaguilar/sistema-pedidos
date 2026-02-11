@@ -7,8 +7,7 @@ export default function UsuarioForm({
   onCancel, 
   modoEdicion = false 
 }) {
-  
-  // Si no se pasan props, usar estado interno (para uso independiente)
+
   const [internalForm, setInternalForm] = useState(formData || { 
     nombre: '',
     correo: '',
@@ -17,7 +16,8 @@ export default function UsuarioForm({
     estado: 'activo'
   });
 
-  // Actualizar el estado interno cuando cambien las props
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+
   useEffect(() => {
     if (formData) {
       setInternalForm(formData);
@@ -30,9 +30,8 @@ export default function UsuarioForm({
       [e.target.name]: e.target.value
     };
     
-    // Si se pasa la función onChange desde el padre, usarla
     if (onChange) {
-      onChange(e); // Para compatibilidad con UsuariosList
+      onChange(e);
     } else {
       setInternalForm(newForm);
     }
@@ -42,18 +41,24 @@ export default function UsuarioForm({
     e.preventDefault();
     
     if (onSubmit) {
-      // Si se pasa onSubmit desde el padre, usarlo
       onSubmit();
     } else {
-      // Comportamiento original para uso independiente
-      const res = await fetch('http://localhost:5001/api/usuarios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(internalForm)
-      });
-      
-      if (res.ok) {
-        alert('Usuario creado');
+      try {
+        const res = await fetch('http://localhost:5001/api/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(internalForm)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || 'Error al crear usuario');
+          return;
+        }
+
+        alert(data.message || 'Usuario creado correctamente');
+
         setInternalForm({
           nombre: '',
           correo: '',
@@ -61,8 +66,9 @@ export default function UsuarioForm({
           rol: 'user',
           estado: 'activo'
         });
-      } else {
-        alert('Error al crear usuario');
+
+      } catch (error) {
+        alert('Error de conexión con el servidor');
       }
     }
   };
@@ -89,21 +95,38 @@ export default function UsuarioForm({
           required
         />
         
-        <input 
-          name="contraseña" 
-          placeholder="Contraseña" 
-          type="password" 
-          value={internalForm.contraseña || ''}
-          onChange={handleChange} 
-          required={!modoEdicion} // Solo requerido al crear
-        />
+        {/* PASSWORD CON OJO */}
+        <div style={{ position: 'relative' }}>
+          <input 
+            name="contraseña" 
+            placeholder="Contraseña" 
+            type={mostrarPassword ? "text" : "password"}
+            value={internalForm.contraseña || ''}
+            onChange={handleChange} 
+            required={!modoEdicion}
+            style={{ paddingRight: '40px' }}
+          />
+
+          <span
+            onClick={() => setMostrarPassword(!mostrarPassword)}
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+          >
+            {mostrarPassword ? '🙈' : '👁️'}
+          </span>
+        </div>
         
         <select name="rol" value={internalForm.rol || 'user'} onChange={handleChange}>
           <option value="user">Usuario</option>
           <option value="admin">Administrador</option>
         </select>
 
-        {/* Campo estado solo para edición */}
         {modoEdicion && (
           <>
             <label>Estado</label>

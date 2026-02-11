@@ -2,27 +2,46 @@
 
 const db = require('../db');
 
-// Obtener productos con búsqueda y paginación
+/// Obtener productos con búsqueda avanzada y paginación
 const obtenerProductos = async (req, res) => {
-  const search = req.query.search?.toLowerCase() || "";
+  const search = req.query.search?.toLowerCase().trim() || "";
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 50;
   const offset = (page - 1) * limit;
-  const searchSql = `%${search}%`;
 
   try {
+    let whereClause = "";
+    let params = [];
+
+    if (search !== "") {
+      const words = search.split(/\s+/);
+
+      const conditions = words
+        .map(() => `(LOWER(nombre_producto) LIKE ? OR LOWER(codigo_original) LIKE ?)`)
+        .join(" AND ");
+
+      whereClause = `WHERE ${conditions}`;
+
+      words.forEach(word => {
+        const like = `%${word}%`;
+        params.push(like, like);
+      });
+    }
+
+    // 🔹 Consulta principal
     const [productos] = await db.query(
       `SELECT * FROM productos
-       WHERE LOWER(nombre_producto) LIKE ? OR LOWER(codigo_original) LIKE ?
+       ${whereClause}
        ORDER BY nombre_producto ASC
        LIMIT ? OFFSET ?`,
-      [searchSql, searchSql, limit, offset]
+      [...params, limit, offset]
     );
 
+    // 🔹 Conteo total
     const [[{ total }]] = await db.query(
       `SELECT COUNT(*) as total FROM productos
-       WHERE LOWER(nombre_producto) LIKE ? OR LOWER(codigo_original) LIKE ?`,
-      [searchSql, searchSql]
+       ${whereClause}`,
+      params
     );
 
     res.json({
@@ -31,11 +50,13 @@ const obtenerProductos = async (req, res) => {
       page,
       totalPages: Math.ceil(total / limit),
     });
+
   } catch (error) {
     console.error('Error en obtenerProductos:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 };
+
 
 // Crear producto - Evita duplicados por código y proveedor
 const crearProducto = async (req, res) => {
@@ -56,14 +77,14 @@ const crearProducto = async (req, res) => {
     if (productosExistentes.length > 0) {
       // Si ya existe con el mismo código y mismo proveedor: SOLO ACTUALIZAR PRECIO
       const productoId = productosExistentes[0].id_producto;
-      
+
       await db.query(
         `UPDATE productos SET precio = ? WHERE id_producto = ?`,
         [precio, productoId]
       );
-      
-      return res.json({ 
-        id: productoId, 
+
+      return res.json({
+        id: productoId,
         message: 'Producto actualizado (precio modificado)',
         accion: 'actualizado',
         detalle: 'Ya existía un producto con el mismo código y proveedor'
@@ -76,16 +97,16 @@ const crearProducto = async (req, res) => {
        VALUES (?, ?, ?, ?)`,
       [nombre_producto, id_proveedor, precio, codigo_original]
     );
-    
-    res.json({ 
-      id: result.insertId, 
+
+    res.json({
+      id: result.insertId,
       message: 'Producto creado exitosamente',
       accion: 'creado'
     });
-    
+
   } catch (error) {
     console.error('Error en crearProducto:', error);
-    
+
     // Manejar posibles errores de duplicados en la base de datos
     if (error.code === 'ER_DUP_ENTRY') {
       // Si hay un error de duplicado en la BD, intentar actualizar
@@ -95,15 +116,15 @@ const crearProducto = async (req, res) => {
            WHERE codigo_original = ? AND id_proveedor = ?`,
           [codigo_original, id_proveedor]
         );
-        
+
         if (existentes.length > 0) {
           await db.query(
             `UPDATE productos SET precio = ? WHERE id_producto = ?`,
             [precio, existentes[0].id_producto]
           );
-          
-          return res.json({ 
-            id: existentes[0].id_producto, 
+
+          return res.json({
+            id: existentes[0].id_producto,
             message: 'Producto actualizado (precio modificado)',
             accion: 'actualizado',
             detalle: 'Duplicado detectado por la base de datos'
@@ -113,7 +134,7 @@ const crearProducto = async (req, res) => {
         console.error('Error al manejar duplicado:', innerError);
       }
     }
-    
+
     res.status(500).json({ error: 'Error en el servidor' });
   }
 };
@@ -133,10 +154,10 @@ const actualizarProducto = async (req, res) => {
          AND id_producto != ?`,
         [codigo_original, id_proveedor, id_producto]
       );
-      
+
       if (duplicados.length > 0) {
-        return res.status(400).json({ 
-          error: 'Ya existe otro producto con el mismo código y proveedor' 
+        return res.status(400).json({
+          error: 'Ya existe otro producto con el mismo código y proveedor'
         });
       }
     }
@@ -150,8 +171,8 @@ const actualizarProducto = async (req, res) => {
        WHERE id_producto = ?`,
       [nombre_producto, id_proveedor, precio, codigo_original, id_producto]
     );
-    
-    res.json({ 
+
+    res.json({
       message: 'Producto actualizado',
       accion: 'actualizado'
     });
@@ -167,7 +188,7 @@ const eliminarProducto = async (req, res) => {
 
   try {
     await db.query('DELETE FROM productos WHERE id_producto = ?', [id_producto]);
-    res.json({ 
+    res.json({
       message: 'Producto eliminado',
       accion: 'eliminado'
     });

@@ -34,7 +34,7 @@ db.connect(err => {
     console.error('❌ Error de conexión a MySQL:', err);
     process.exit(1);
   }
-  //console.log('✅ Conectado a MySQL');
+  console.log('✅ Conectado a MySQL');
 });
 
 // Rutas
@@ -47,11 +47,11 @@ app.use('/api/usuarios', Usuario);
 app.use('/api/config', confg);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(express.static(path.join(__dirname, 'build')));
+/*app.use(express.static(path.join(__dirname, 'build')));
 app.get('*', (req, res) =>
   res.sendFile(path.join(__dirname, 'build', 'index.html'))
 );
-
+*/
 // Función para iniciar el servidor con reintentos
 const startServer = async (port, attempts = 5) => {
   if (attempts <= 0) {
@@ -61,13 +61,13 @@ const startServer = async (port, attempts = 5) => {
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {
-      //console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
+      console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
       resolve(server);
     });
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        //console.log(`⚠️  Puerto ${port} ocupado. Probando con ${port + 1}...`);
+        console.log(`⚠️  Puerto ${port} ocupado. Probando con ${port + 1}...`);
         startServer(port + 1, attempts - 1).then(resolve);
       } else {
         console.error('❌ Error inesperado:', err);
@@ -84,7 +84,7 @@ const startServer = async (port, attempts = 5) => {
     
     // Manejo de cierre limpio
     process.on('SIGINT', () => {
-      //console.log('\n🔴 Apagando servidor...');
+      console.log('\n🔴 Apagando servidor...');
       server.close(() => {
         db.end();
         process.exit();

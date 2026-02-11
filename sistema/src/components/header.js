@@ -10,7 +10,6 @@ import {
   FaSignOutAlt,
   FaChartPie,
   FaCog,
-  FaBell,
   FaSun,
   FaMoon
 } from "react-icons/fa";
@@ -26,19 +25,13 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Configuración del sistema
   const [config, setConfig] = useState({});
 
   useEffect(() => {
-    // Reloj
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-
-    // Scroll
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
 
-    // Carga config
     const loadConfig = async () => {
       try {
         const res = await fetch("http://localhost:5001/api/config");
@@ -56,10 +49,8 @@ const Header = () => {
     };
   }, []);
 
-  // Función para determinar si es de día o de noche
   const isDayTime = (date) => {
     const hour = date.getHours();
-    // Consideramos día de 6:00 AM a 6:00 PM
     return hour >= 6 && hour < 18;
   };
 
@@ -94,6 +85,12 @@ const Header = () => {
     { path: "/usuarios", icon: FaUsers, label: "Usuarios", badge: null },
   ];
 
+  const handleNavigate = (path) => {
+    setIsMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    navigate(path);
+  };
+
   return (
     <>
       <header className={`header-professional ${isScrolled ? "scrolled" : ""}`}>
@@ -127,23 +124,27 @@ const Header = () => {
           {/* Navigation */}
           <nav className="navigation-center">
             <div className="nav-items">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`nav-item ${isActive(item.path) ? "active" : ""}`}
-                >
-                  <item.icon className="nav-icon" />
-                  <span>{item.label}</span>
-                  {item.badge && <span className="nav-badge">{item.badge}</span>}
-                </Link>
-              ))}
+              {menuItems.map((item) => {
+                // Ocultar Usuarios si no es Admin
+                if (item.label === "Usuarios" && user?.rol !== "admin") return null;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`nav-item ${isActive(item.path) ? "active" : ""}`}
+                  >
+                    <item.icon className="nav-icon" />
+                    <span>{item.label}</span>
+                    {item.badge && <span className="nav-badge">{item.badge}</span>}
+                  </Link>
+                );
+              })}
             </div>
           </nav>
 
           {/* User Section */}
           <div className="user-section">
-            {/* System Status */}
             <div className="system-status">
               <div className="status-indicator online">
                 <i className="fas fa-circle"></i>
@@ -151,10 +152,8 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Time - MANTENIENDO EL MISMO DISEÑO */}
             <div className="time-display">
               <div className="time-icon">
-                {/* Reemplazamos el ícono de reloj con sol o luna */}
                 {isDayTime(currentTime) ? (
                   <FaSun className="time-sun-icon" />
                 ) : (
@@ -167,18 +166,18 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="quick-actions">
-              <Link
-                to="/configuracion"
-                className="action-btn settings-btn"
-                title="Configuración del Sistema"
-              >
-                <FaCog />
-              </Link>
+              {user?.rol === "admin" && (
+                <Link
+                  to="/configuracion"
+                  className="action-btn settings-btn"
+                  title="Configuración del Sistema"
+                >
+                  <FaCog />
+                </Link>
+              )}
             </div>
 
-            {/* User Profile */}
             <div
               className="user-profile"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -209,9 +208,7 @@ const Header = () => {
               </div>
               <div className="menu-user-info">
                 <div className="menu-user-name">{user?.nombre || "Usuario"}</div>
-                <div className="menu-user-email">
-                  {user?.email || "usuario@holfer.com"}
-                </div>
+                <div className="menu-user-email">{user?.email || "usuario@holfer.com"}</div>
                 <div className="menu-user-role">{user?.rol || "Administrador"}</div>
               </div>
             </div>
@@ -231,7 +228,6 @@ const Header = () => {
                     >
                       <item.icon />
                       <span>{item.label}</span>
-                      {item.badge && <span className="menu-badge">{item.badge}</span>}
                     </Link>
                   ))}
                 </div>
@@ -240,33 +236,38 @@ const Header = () => {
               <div className="menu-section">
                 <h4>Administración</h4>
                 <div className="menu-items">
-                  {menuItems.slice(3).map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className="menu-item"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
+                  {menuItems.slice(3).map((item) => {
+                    if (item.label === "Usuarios" && user?.rol !== "admin") return null;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className="menu-item"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="menu-section">
-                <h4>Configuración</h4>
-                <div className="menu-items">
-                  <Link
-                    to="/configuracion"
-                    className="menu-item"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FaCog />
-                    <span>Configuración de sistema</span>
-                  </Link>
+              {user?.rol === "admin" && (
+                <div className="menu-section">
+                  <h4>Configuración</h4>
+                  <div className="menu-items">
+                    <Link
+                      to="/configuracion"
+                      className="menu-item"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaCog />
+                      <span>Configuración de sistema</span>
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="menu-footer">
@@ -298,26 +299,39 @@ const Header = () => {
 
         <nav className="mobile-nav">
           <div className="mobile-nav-items">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`mobile-nav-item ${isActive(item.path) ? "active" : ""}`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <item.icon className="nav-icon" />
-                <span>{item.label}</span>
-                {item.badge && <span className="mobile-nav-badge">{item.badge}</span>}
-              </Link>
-            ))}
+            {menuItems.map((item) => {
+              if (item.label === "Usuarios" && user?.rol !== "admin") return null;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`mobile-nav-item ${isActive(item.path) ? "active" : ""}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <item.icon className="nav-icon" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </nav>
 
+        {user?.rol === "admin" && (
+          <div className="mobile-sidebar-footer">
+            <Link
+              to="/configuracion"
+              className="mobile-nav-item"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <FaCog />
+              <span>Configuración</span>
+            </Link>
+          </div>
+        )}
+
         <div className="mobile-sidebar-footer">
           <div className="mobile-user-info">
-            <div className="mobile-user-avatar">
-              {user?.nombre ? getInitials(user.nombre) : "U"}
-            </div>
+            <div className="mobile-user-avatar">{user?.nombre ? getInitials(user.nombre) : "U"}</div>
             <div className="mobile-user-details">
               <div className="mobile-user-name">{user?.nombre || "Usuario"}</div>
               <div className="mobile-user-role">{user?.rol || "Administrador"}</div>
