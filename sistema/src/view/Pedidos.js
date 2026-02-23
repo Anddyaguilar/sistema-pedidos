@@ -602,8 +602,7 @@ export default function PedidosView() {
   const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
 
   // Estados de carga y error
-  if (loading) return <p>Cargando pedidos...</p>;
-  if (error) return <p className="text-red-500">Error: {error}</p>;
+
 
   return (
     <div className="order-list">
@@ -685,7 +684,10 @@ export default function PedidosView() {
                         />
                       </td>
                       <td>{pedido.id_pedido}</td>
-                      <td>{getUserName(pedido.id_user)}</td>
+                      <td>
+                        {getUserName(pedido.id_actualizado || pedido.id_user)}
+                      </td>
+
                       <td>
                         <div className="td-estado">
                           <div

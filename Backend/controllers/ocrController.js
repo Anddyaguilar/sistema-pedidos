@@ -24,7 +24,7 @@ async function generateWithRetry(model, input, retries = 5, initialDelay = 2000,
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      //console.log(`Intento ${attempt + 1} de ${retries}`);
+      ////console.log(`Intento ${attempt + 1} de ${retries}`);
       const result = await model.generateContent(input);
       return result;
     } catch (err) {
@@ -66,7 +66,7 @@ Devuelve únicamente un JSON válido, sin texto adicional, con esta estructura:
 }
 
 Reglas importantes:
-1. Si detectas "código original" o "código alterno" en la imagen, usa esos valores para llenar "codigo_original" en el JSON (campo de la BD).
+1. Si detectas "código original" o "código alterno" o alterno en la imagen, usa esos valores para llenar "codigo_original" en el JSON (campo de la BD).
 2. Si detectas "nombre del producto", "marca" o "descripción", combina estos y colócalos en "nombre_producto" en el JSON (campo de la BD).
 3. "precio" debe ser decimal si aparece con decimales.
 4. Si algún campo no se detecta, usa null.

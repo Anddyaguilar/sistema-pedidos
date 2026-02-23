@@ -34,7 +34,7 @@ const mostrarDetallesPedido = async (req, res) => {
       return res.status(404).json({ error: 'No se encontraron detalles para este pedido' });
     }
 
-    //console.log("Detalles obtenidos:", results); // Para debug
+    ////console.log("Detalles obtenidos:", results); // Para debug
     res.json(results);
   } catch (error) {
     //console.error('Error al obtener los detalles del pedido:', error);
@@ -75,14 +75,14 @@ const obtenerPedidoConDetalles = async (req, res) => {
 
 // Crear un nuevo pedido
 const crearPedido = async (req, res) => {
-  //console.log('📥 BODY RECIBIDO:', req.body);
-  //console.log('👤 USER JWT:', req.user);
+  ////console.log('📥 BODY RECIBIDO:', req.body);
+  ////console.log('👤 USER JWT:', req.user);
 
   const { fecha_pedido, id_proveedor, detalles } = req.body;
 
   // Validación básica
   if (!fecha_pedido || !id_proveedor || !Array.isArray(detalles) || detalles.length === 0) {
-    //console.log('❌ Error: datos incompletos o sin detalles');
+    ////console.log('❌ Error: datos incompletos o sin detalles');
     return res.status(400).json({ error: 'Datos incompletos o sin detalles' });
   }
 
@@ -92,11 +92,11 @@ const crearPedido = async (req, res) => {
     const id_usuario = req.user?.id;
     if (!id_usuario) {
       await db.query('ROLLBACK');
-      //console.log('❌ Usuario no identificado');
+      ////console.log('❌ Usuario no identificado');
       return res.status(400).json({ error: 'Usuario no autenticado' });
     }
 
-    //console.log('🧾 Detalles recibidos CRUDOS:', detalles);
+    ////console.log('🧾 Detalles recibidos CRUDOS:', detalles);
 
     // Filtrar y normalizar detalles válidos
     const detallesValues = detalles
@@ -114,11 +114,11 @@ const crearPedido = async (req, res) => {
         d.precio_unitario > 0
       );
 
-    //console.log('✅ Detalles válidos BACKEND:', detallesValues);
+    ////console.log('✅ Detalles válidos BACKEND:', detallesValues);
 
     if (detallesValues.length === 0) {
       await db.query('ROLLBACK');
-      //console.log('❌ No hay detalles válidos');
+      ////console.log('❌ No hay detalles válidos');
       return res.status(400).json({
         error: 'Los productos enviados no son válidos',
         detalles_recibidos: detalles
@@ -132,7 +132,7 @@ const crearPedido = async (req, res) => {
     );
 
     const id_pedido = pedidoResult.insertId;
-    //console.log('🆕 Pedido creado con ID:', id_pedido);
+    ////console.log('🆕 Pedido creado con ID:', id_pedido);
 
     // Preparar detalles para insert múltiple
     const insertValues = detallesValues.map(d => [
@@ -161,7 +161,7 @@ const crearPedido = async (req, res) => {
 
     await db.query('COMMIT');
 
-    // console.log('✅ Pedido creado correctamente');
+    // //console.log('✅ Pedido creado correctamente');
 
     res.status(201).json({ message: 'Pedido creado', id_pedido });
 
@@ -604,7 +604,7 @@ const obtenerProductosPorProveedor = async (req, res) => {
   }
 
   try {
-    //console.log("Proveedor ID recibido:", proveedorId);
+    ////console.log("Proveedor ID recibido:", proveedorId);
     const [productos] = await db.query(
       `SELECT * FROM productos
        WHERE id_proveedor = ?

@@ -516,7 +516,7 @@ const ProductList = () => {
 
   // Estados para OCR
   const [ocrPreview, setOcrPreview] = useState('');
-  const [loadingImage, setLoadingImage] = useState(false);
+  const [loadingImage, setLoadingImage] = useState(true);
   const [productosDetectados, setProductosDetectados] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -894,9 +894,9 @@ const ProductList = () => {
    const rolUsuario = localStorage.getItem("rol"); // "admin" o "user"
 
   // ================= RENDER =================
-  if (loading && products.length === 0) {
+ /* if (loading && products.length === 0) {
     return <div className="loading-container">Cargando productos...</div>;
-  }
+  }*/
 
   return (
     <div className="order-list">

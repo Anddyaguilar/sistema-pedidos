@@ -6,7 +6,7 @@ require('dotenv').config();
 const login = async (req, res) => {
   const { nombre, contraseña } = req.body;
 
-  //console.log('Body recibido:', req.body); // Verificar lo que llega
+  ////console.log('Body recibido:', req.body); // Verificar lo que llega
 
   // Verificar que las credenciales no falten
   if (!nombre || !contraseña) {
@@ -45,7 +45,7 @@ const login = async (req, res) => {
       correo: usuario.correo,
       rol: usuario.rol
     };
-     //console.log('🧪 PAYLOAD JWT:', payload);
+     ////console.log('🧪 PAYLOAD JWT:', payload);
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 

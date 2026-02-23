@@ -116,7 +116,7 @@ const Header = () => {
                 <h1 className="brand-name">
                   Sistema Pedidos {config.company_name || "SIGPRO"}
                 </h1>
-                <span className="brand-subtitle">Enterprise Dashboard</span>
+                <span className="brand-subtitle">Enterprise </span>
               </div>
             </div>
           </div>

@@ -67,27 +67,7 @@ const Stats = () => {
 
   const formatoFecha = fecha => format(fecha, "PPpp", { locale: es });
 
-  if (stats.loading) {
-    return (
-      <div className="dashboard">
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Cargando datos del dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (stats.error) {
-    return (
-      <div className="dashboard">
-        <div className="error-container">
-          <h3>Error</h3>
-          <p>{stats.error}</p>
-        </div>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="dashboard">

@@ -142,10 +142,10 @@ const crearProducto = async (req, res) => {
 // Actualizar producto (para uso manual, no desde la creación)
 const actualizarProducto = async (req, res) => {
   const { id_producto } = req.params;
-  const { nombre_producto, id_proveedor, precio, codigo_original } = req.body;
+  const { nombre_producto, id_proveedor, precio, codigo_original, moneda } = req.body;
 
   try {
-    // Verificar que no se cree un duplicado al actualizar
+    // Verificar duplicados
     if (codigo_original && id_proveedor) {
       const [duplicados] = await db.query(
         `SELECT id_producto FROM productos 
@@ -162,14 +162,16 @@ const actualizarProducto = async (req, res) => {
       }
     }
 
+    // Actualizar producto incluyendo tipo_moneda
     await db.query(
       `UPDATE productos SET 
         nombre_producto = ?, 
         id_proveedor = ?, 
         precio = ?, 
-        codigo_original = ? 
+        codigo_original = ?, 
+        tipo_moneda = ?
        WHERE id_producto = ?`,
-      [nombre_producto, id_proveedor, precio, codigo_original, id_producto]
+      [nombre_producto, id_proveedor, precio, codigo_original, moneda, id_producto]
     );
 
     res.json({
@@ -181,6 +183,10 @@ const actualizarProducto = async (req, res) => {
     res.status(500).json({ error: 'Error en el servidor' });
   }
 };
+
+
+
+
 
 // Eliminar producto
 const eliminarProducto = async (req, res) => {

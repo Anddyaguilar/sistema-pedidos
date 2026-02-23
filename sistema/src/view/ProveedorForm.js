@@ -75,7 +75,7 @@ const ProveedorForm = ({ onSave, onCancel, proveedor }) => {
       }
       
       const data = await response.json();
-      console.log(proveedor ? 'Proveedor actualizado:' : 'Proveedor creado:', data);
+      //console.log(proveedor ? 'Proveedor actualizado:' : 'Proveedor creado:', data);
       alert(`Proveedor ${proveedor ? 'actualizado' : 'guardado'} correctamente`);
       onSave(data);  // Se llama a la función onSave para manejar el proveedor creado/actualizado
     } catch (error) {
