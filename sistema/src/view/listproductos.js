@@ -495,7 +495,7 @@ const ProductList = () => {
   // ================= ESTADOS =================
   const [products, setProducts] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -516,7 +516,7 @@ const ProductList = () => {
 
   // Estados para OCR
   const [ocrPreview, setOcrPreview] = useState('');
-  const [loadingImage, setLoadingImage] = useState(true);
+  const [loadingImage, setLoadingImage] = useState(false);
   const [productosDetectados, setProductosDetectados] = useState([]);
 
   const [formData, setFormData] = useState({
